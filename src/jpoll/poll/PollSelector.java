@@ -29,7 +29,11 @@ import jpoll.NativeSelectableChannel;
  */
 public class PollSelector extends java.nio.channels.spi.AbstractSelector {
     private static final LibC libc = Library.loadLibrary("c", LibC.class);
-
+    private static final int POLLFD_SIZE = 8;
+    private static final int FD_OFFSET = 0;
+    private static final int EVENTS_OFFSET = 4;
+    private static final int REVENTS_OFFSET = 6;
+    
     private PollSelectionKey[] keyArray = new PollSelectionKey[0];
     private ByteBuffer pollData = null;
     private int nfds;
@@ -43,16 +47,29 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
     public PollSelector(SelectorProvider provider) {
         super(provider);
         libc.pipe(pipefd);
+        // Register the wakeup pipe as the first element in the pollfd array
+        pollData = ByteBuffer.allocateDirect(8).order(ByteOrder.nativeOrder());
+        putPollFD(0, pipefd[0]);
+        putPollEvents(0, LibC.POLLIN);
+        nfds = 1;
+        keyArray = new PollSelectionKey[1];
     }
-    private static final int fdOffset(PollSelectionKey k) {
-        return k.getIndex() * 8;
+    private void putPollFD(int idx, int fd) {
+        pollData.putInt((idx * POLLFD_SIZE) + FD_OFFSET, fd);
     }
-    private static final int reventsOffset(PollSelectionKey k) {
-        return (k.getIndex() * 8) + 6;
+    private void putPollEvents(int idx, int events) {
+        pollData.putShort((idx * POLLFD_SIZE) + EVENTS_OFFSET, (short) events);
     }
-    private static final int eventsOffset(PollSelectionKey k) {
-        return (k.getIndex() * 8) + 4;
+    private int getPollFD(int idx) {
+        return pollData.getInt((idx * POLLFD_SIZE) + FD_OFFSET);
     }
+    private short getPollEvents(int idx) {
+        return pollData.getShort((idx * POLLFD_SIZE) + EVENTS_OFFSET);
+    }
+    private short getPollRevents(int idx) {
+        return pollData.getShort((idx * POLLFD_SIZE) + REVENTS_OFFSET);
+    }
+
     @Override
     protected void implCloseSelector() throws IOException {
         if (pipefd[0] != -1) {
@@ -89,7 +106,7 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         if ((ops & (SelectionKey.OP_WRITE | SelectionKey.OP_CONNECT)) != 0) {
             events |= LibC.POLLOUT;
         }
-        pollData.putShort(eventsOffset(k), events);
+        putPollEvents(k.getIndex(), events);
     }
     private void add(PollSelectionKey k) {
         synchronized (regLock) {
@@ -98,7 +115,7 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
                 PollSelectionKey[] newArray = new PollSelectionKey[nfds + (nfds / 2)];
                 System.arraycopy(keyArray, 0, newArray, 0, nfds - 1);
                 keyArray = newArray;
-                ByteBuffer newBuffer = ByteBuffer.allocate(newArray.length * 8);
+                ByteBuffer newBuffer = ByteBuffer.allocateDirect(newArray.length * 8);
                 if (pollData != null) {
                     newBuffer.put(pollData);
                 }
@@ -107,10 +124,9 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
             }
             k.setIndex(nfds - 1);
             keyArray[nfds - 1] = k;
-            pollData.putInt(fdOffset(k), k.getFd());
-            pollData.putInt(eventsOffset(k), 0);
+            putPollFD(k.getIndex(), k.getFd());
+            putPollEvents(k.getIndex(), 0);
             keys.put(k, true);
-            System.out.println("Added key at index=" + k.getIndex());
         }
     }
     private void remove(PollSelectionKey k) {
@@ -120,14 +136,15 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
             // If not the last key, swap last one into the removed key's position
             //
             if (idx < (nfds - 1)) {
-                System.out.println("Swapping " + (nfds - 1) + " with " + idx);
                 PollSelectionKey last = keyArray[nfds - 1];
                 keyArray[idx] = last;
-                pollData.putLong(idx * 8, pollData.getLong(last.getIndex() * 8));
+                // Copy the data for the last key into place
+                putPollFD(idx, getPollFD(last.getIndex()));
+                putPollEvents(idx, getPollEvents(last.getIndex()));
                 last.setIndex(idx);
             } else {
-                // Just clear out the key
-                pollData.putLong(idx * 8, 0L);
+                putPollFD(idx, -1);
+                putPollEvents(idx, 0);
             }
             keyArray[nfds - 1] = null;
             --nfds;
@@ -161,30 +178,28 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
             cancelled.clear();
         }
         selected.clear();
-        System.out.print("Before poll(2): ");
-        for (int i = 0; i < nfds; ++i) {
-            System.out.print(pollData.getInt( i * 8));
-            System.out.print(", ");
-        }
-        System.out.println();
+        begin();
         int n = libc.poll(pollData, nfds, (int) timeout);
-        System.out.print("After poll(2): ");
-        for (int i = 0; i < nfds; ++i) {
-            System.out.print(pollData.getInt(i * 8));
-            System.out.print(", ");
+        end();
+        if ((getPollRevents(0) & LibC.POLLIN) != 0) {
+            wakeupReceived();
         }
-        System.out.println();
         for (SelectionKey k : keys.keySet()) {
             PollSelectionKey pk = (PollSelectionKey) k;
-            short revents = pollData.getShort(reventsOffset(pk));
+            int revents = getPollRevents(pk.getIndex());
             if (revents != 0) {
                 int iops = k.interestOps();
                 int ops = 0;
                 if ((revents & LibC.POLLIN) != 0) {
-                    ops = iops & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ);
+                    ops |= iops & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ);
                 }
                 if ((revents & LibC.POLLOUT) != 0) {
-                    ops = iops & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE);
+                    ops |= iops & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE);
+                }
+                // If an error occurred, enable all interested ops and let the
+                // event handling code deal with it
+                if ((revents & (LibC.POLLHUP | LibC.POLLERR)) != 0) {
+                    ops = iops;
                 }
                 ((PollSelectionKey) k).readyOps(ops);
                 selected.add(k);
@@ -192,13 +207,19 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         }
         return n;
     }
+    private void wakeupReceived() {
+        libc.read(pipefd[0], ByteBuffer.allocate(1), 1);
+    }
     @Override
     public Selector wakeup() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        libc.write(pipefd[1], ByteBuffer.allocate(1), 1);
+        return this;
     }
     private static interface LibC {
         static final int POLLIN = 0x1;
         static final int POLLOUT = 0x4;
+        static final int POLLERR = 0x8;
+        static final int POLLHUP = 0x10;
         public int poll(ByteBuffer pfds, int nfds, int timeout);
         public int pipe(@Out int[] fds);
         public int close(int fd);

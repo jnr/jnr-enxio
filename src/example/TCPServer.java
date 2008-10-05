@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.util.Set;
 import jpoll.NativeSelectableChannel;
 import jpoll.NativeSelectorProvider;
 
@@ -85,6 +84,7 @@ public class TCPServer {
             try {
                 ch.configureBlocking(false);
                 ch.register(selector, SelectionKey.OP_READ, new Client(selector, ch));
+                selector.wakeup();
             } catch (IOException ex) {}
         }
         public void write() {
@@ -93,13 +93,12 @@ public class TCPServer {
         }
     }
     private static class Client extends IO {
-        private final ByteBuffer outbuf = ByteBuffer.allocate(1024);
+        private final ByteBuffer buf = ByteBuffer.allocateDirect(1024);
         public Client(Selector selector, NativeSelectableChannel ch) {
             super(selector, ch);
         }
         public void read() {
-            byte[] data = new byte[100];
-            int n = libc.read(channel.getFd(), data, data.length);
+            int n = libc.read(channel.getFd(), buf, buf.remaining());
             System.out.println("Read " + n + " bytes from client");
             if (n <= 0) {
                 SelectionKey k = channel.keyFor(selector);
@@ -107,25 +106,32 @@ public class TCPServer {
                 libc.close(channel.getFd());
                 return;
             }
-            outbuf.put(data, 0, n);
-            outbuf.flip();
+            buf.position(n);
+            buf.flip();
             channel.keyFor(selector).interestOps(SelectionKey.OP_WRITE);
         }
         public void write() {
-            if (!outbuf.hasRemaining()) {
-                outbuf.clear();
-                channel.keyFor(selector).interestOps(SelectionKey.OP_READ);
-            } else {
-                int n = libc.write(channel.getFd(), outbuf, outbuf.remaining());
+            while (buf.hasRemaining()) {
+                int n = libc.write(channel.getFd(), buf, buf.remaining());
+                System.out.println("write returned " + n);
                 if (n > 0) {
-                    outbuf.position(outbuf.position() + n);
+                    buf.position(buf.position() + n);
+                }
+                if (n == 0) {
+                    return;
+                }
+                if (n < 0) {
+                    channel.keyFor(selector).cancel();
+                    libc.close(channel.getFd());
+                    return;
                 }
             }
+            System.out.println("outbuf empty");
+            buf.clear();
+            channel.keyFor(selector).interestOps(SelectionKey.OP_READ);
         }
     }
     public static void main(String[] args) {
-        
-        int rc;
         short baseport = 2000;
         try {
             Selector selector = NativeSelectorProvider.getInstance().openSelector();
@@ -136,7 +142,6 @@ public class TCPServer {
             }
             while (true) {
                 selector.select();
-                Set<SelectionKey> selected = selector.selectedKeys();
                 for (SelectionKey k : selector.selectedKeys()) {
                     if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0) {
                         ((IO) k.attachment()).read();
