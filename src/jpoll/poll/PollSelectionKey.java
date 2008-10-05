@@ -33,8 +33,8 @@ class PollSelectionKey extends AbstractSelectionKey {
     int getIndex() {
         return index;
     }
-    int getFd() {
-        return channel.getFd();
+    int getFD() {
+        return channel.getFD();
     }
     
     @Override

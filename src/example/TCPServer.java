@@ -78,7 +78,7 @@ public class TCPServer {
         public void read() {
             sockaddr_in sin = new sockaddr_in();
             IntByReference addrSize = new IntByReference(StructUtil.getSize(sin));
-            int clientfd = libc.accept(channel.getFd(), sin, addrSize);
+            int clientfd = libc.accept(channel.getFD(), sin, addrSize);
             System.out.println("client fd = " + clientfd);
             NativeSelectableChannel ch = NativeSelectableChannel.forSocket(clientfd);
             try {
@@ -98,12 +98,12 @@ public class TCPServer {
             super(selector, ch);
         }
         public void read() {
-            int n = libc.read(channel.getFd(), buf, buf.remaining());
+            int n = libc.read(channel.getFD(), buf, buf.remaining());
             System.out.println("Read " + n + " bytes from client");
             if (n <= 0) {
                 SelectionKey k = channel.keyFor(selector);
                 k.cancel();
-                libc.close(channel.getFd());
+                libc.close(channel.getFD());
                 return;
             }
             buf.position(n);
@@ -112,7 +112,7 @@ public class TCPServer {
         }
         public void write() {
             while (buf.hasRemaining()) {
-                int n = libc.write(channel.getFd(), buf, buf.remaining());
+                int n = libc.write(channel.getFD(), buf, buf.remaining());
                 System.out.println("write returned " + n);
                 if (n > 0) {
                     buf.position(buf.position() + n);
@@ -122,7 +122,7 @@ public class TCPServer {
                 }
                 if (n < 0) {
                     channel.keyFor(selector).cancel();
-                    libc.close(channel.getFd());
+                    libc.close(channel.getFD());
                     return;
                 }
             }

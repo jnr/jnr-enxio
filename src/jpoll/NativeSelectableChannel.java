@@ -63,7 +63,7 @@ public class NativeSelectableChannel extends AbstractSelectableChannel
     public int validOps() {
         return validOps;
     }
-    public int getFd() {
+    public int getFD() {
         return fd;
     }
     public int read(ByteBuffer dst) throws IOException {

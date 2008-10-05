@@ -124,7 +124,7 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
             }
             k.setIndex(nfds - 1);
             keyArray[nfds - 1] = k;
-            putPollFD(k.getIndex(), k.getFd());
+            putPollFD(k.getIndex(), k.getFD());
             putPollEvents(k.getIndex(), 0);
             keys.put(k, true);
         }
