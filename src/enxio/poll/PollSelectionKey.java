@@ -3,34 +3,40 @@
  * and open the template in the editor.
  */
 
-package jpoll.kqueue;
-
+package enxio.poll;
 
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectionKey;
-import jpoll.NativeSelectableChannel;
+import enxio.NativeSelectableChannel;
 
 /**
  *
  * @author wayne
  */
-class KQSelectionKey extends AbstractSelectionKey {
-    private final KQSelector selector;
+class PollSelectionKey extends AbstractSelectionKey {
+    private final PollSelector selector;
     private final NativeSelectableChannel channel;
     private int interestOps = 0;
     private int readyOps = 0;
+    private int index = -1;
     
-    public KQSelectionKey(KQSelector selector, NativeSelectableChannel channel, int ops) {
+    public PollSelectionKey(PollSelector selector, NativeSelectableChannel channel) {
         this.selector = selector;
         this.channel = channel;
-        this.interestOps = ops;
+    }
+
+    void setIndex(int index) {
+        this.index = index;
+    }
+    int getIndex() {
+        return index;
     }
     int getFD() {
         return channel.getFD();
     }
-
+    
     @Override
     public SelectableChannel channel() {
         return channel;

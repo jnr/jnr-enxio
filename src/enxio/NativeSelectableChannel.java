@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package jpoll;
+package enxio;
 
 import com.googlecode.jffi.Library;
 import com.googlecode.jffi.annotations.In;

@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package jpoll;
+package enxio;
 
 import com.googlecode.jffi.Platform;
 import java.io.IOException;
@@ -13,8 +13,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelector;
 import java.nio.channels.spi.SelectorProvider;
-import jpoll.kqueue.KQSelector;
-import jpoll.poll.PollSelector;
+import enxio.kqueue.KQSelector;
+import enxio.poll.PollSelector;
 
 /**
  *

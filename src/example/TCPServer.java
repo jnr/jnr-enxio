@@ -15,8 +15,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import jpoll.NativeSelectableChannel;
-import jpoll.NativeSelectorProvider;
+import enxio.NativeSelectableChannel;
+import enxio.NativeSelectorProvider;
 
 /**
  *

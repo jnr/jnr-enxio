@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package jpoll.kqueue;
+package enxio.kqueue;
 
 import com.googlecode.jffi.Library;
 import com.googlecode.jffi.Platform;
@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import jpoll.NativeSelectableChannel;
-import jpoll.NativeSelectorProvider;
+import enxio.NativeSelectableChannel;
+import enxio.NativeSelectorProvider;
 
 /**
  *

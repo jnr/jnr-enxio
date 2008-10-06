@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package jpoll.poll;
+package enxio.poll;
 
 import com.googlecode.jffi.Library;
 import com.googlecode.jffi.annotations.In;
@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import jpoll.NativeSelectableChannel;
+import enxio.NativeSelectableChannel;
 
 /**
  *
