@@ -5,6 +5,7 @@
 
 package jpoll;
 
+import com.googlecode.jffi.Platform;
 import java.io.IOException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.Pipe;
@@ -12,6 +13,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelector;
 import java.nio.channels.spi.SelectorProvider;
+import jpoll.kqueue.KQSelector;
 import jpoll.poll.PollSelector;
 
 /**
@@ -37,7 +39,7 @@ public final class NativeSelectorProvider extends SelectorProvider {
 
     @Override
     public AbstractSelector openSelector() throws IOException {
-        return new PollSelector(this);
+        return Platform.isBSD() ? new KQSelector(this) : new PollSelector(this);
     }
 
     @Override
