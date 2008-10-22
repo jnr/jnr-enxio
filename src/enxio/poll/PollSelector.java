@@ -5,9 +5,9 @@
 
 package enxio.poll;
 
-import com.googlecode.jffi.Library;
-import com.googlecode.jffi.annotations.In;
-import com.googlecode.jffi.annotations.Out;
+import com.kenai.jaffl.Library;
+import com.kenai.jaffl.annotations.In;
+import com.kenai.jaffl.annotations.Out;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

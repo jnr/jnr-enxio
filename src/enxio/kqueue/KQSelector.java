@@ -5,12 +5,12 @@
 
 package enxio.kqueue;
 
-import com.googlecode.jffi.Library;
-import com.googlecode.jffi.Platform;
-import com.googlecode.jffi.annotations.In;
-import com.googlecode.jffi.annotations.Out;
-import com.googlecode.jffi.annotations.Transient;
-import com.googlecode.jffi.struct.Struct;
+import com.kenai.jaffl.Library;
+import com.kenai.jaffl.Platform;
+import com.kenai.jaffl.annotations.In;
+import com.kenai.jaffl.annotations.Out;
+import com.kenai.jaffl.annotations.Transient;
+import com.kenai.jaffl.struct.Struct;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

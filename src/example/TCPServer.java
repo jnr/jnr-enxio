@@ -5,12 +5,12 @@
 
 package example;
 
-import com.googlecode.jffi.Library;
-import com.googlecode.jffi.annotations.In;
-import com.googlecode.jffi.annotations.Out;
-import com.googlecode.jffi.byref.IntByReference;
-import com.googlecode.jffi.struct.Struct;
-import com.googlecode.jffi.struct.StructUtil;
+import com.kenai.jaffl.Library;
+import com.kenai.jaffl.annotations.In;
+import com.kenai.jaffl.annotations.Out;
+//import com.kenai.jaffl.byref.IntByReference;
+import com.kenai.jaffl.struct.Struct;
+import com.kenai.jaffl.struct.StructUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -40,7 +40,7 @@ public class TCPServer {
         int close(int fd);
         int listen(int fd, int backlog);
         int bind(int fd, sockaddr_in addr, int len);
-        int accept(int fd, @Out sockaddr_in addr, IntByReference len);
+        int accept(int fd, @Out sockaddr_in addr, int[] len);
         int read(int fd, @Out ByteBuffer data, int len);
         int read(int fd, @Out byte[] data, int len);
         int write(int fd, @In ByteBuffer data, int len);
@@ -77,7 +77,7 @@ public class TCPServer {
         }
         public void read() {
             sockaddr_in sin = new sockaddr_in();
-            IntByReference addrSize = new IntByReference(StructUtil.getSize(sin));
+            int[] addrSize = { StructUtil.getSize(sin) };
             int clientfd = libc.accept(channel.getFD(), sin, addrSize);
             System.out.println("client fd = " + clientfd);
             NativeSelectableChannel ch = NativeSelectableChannel.forSocket(clientfd);

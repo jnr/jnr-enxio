@@ -5,7 +5,7 @@
 
 package enxio;
 
-import com.googlecode.jffi.Platform;
+import com.kenai.jaffl.Platform;
 import java.io.IOException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.Pipe;
