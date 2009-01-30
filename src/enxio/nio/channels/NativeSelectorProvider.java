@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package enxio;
+package enxio.nio.channels;
 
 import com.kenai.jaffl.Platform;
 import java.io.IOException;
@@ -13,8 +13,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelector;
 import java.nio.channels.spi.SelectorProvider;
-import enxio.kqueue.KQSelector;
-import enxio.poll.PollSelector;
+import enxio.nio.channels.kqueue.KQSelector;
+import enxio.nio.channels.poll.PollSelector;
 
 /**
  *

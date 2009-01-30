@@ -3,14 +3,14 @@
  * and open the template in the editor.
  */
 
-package enxio.kqueue;
+package enxio.nio.channels.kqueue;
 
 
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectionKey;
-import enxio.NativeSelectableChannel;
+import enxio.nio.channels.NativeSelectableChannel;
 
 /**
  *

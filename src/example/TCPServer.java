@@ -5,7 +5,9 @@
 
 package example;
 
+import com.kenai.jaffl.LastError;
 import com.kenai.jaffl.Library;
+import com.kenai.jaffl.Platform;
 import com.kenai.jaffl.annotations.In;
 import com.kenai.jaffl.annotations.Out;
 //import com.kenai.jaffl.byref.IntByReference;
@@ -15,8 +17,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import enxio.NativeSelectableChannel;
-import enxio.NativeSelectorProvider;
+import enxio.nio.channels.NativeSelectableChannel;
+import enxio.nio.channels.NativeSelectorProvider;
 
 /**
  *
@@ -24,10 +26,19 @@ import enxio.NativeSelectorProvider;
  */
 public class TCPServer {
     static final LibC libc = Library.loadLibrary("c", LibC.class);
-    static class sockaddr_in extends Struct {
+    static class SockAddr extends Struct {
+    }
+    static class BSDSockAddrIN extends SockAddr {
 
         public final Unsigned8 sin_len = new Unsigned8();
         public final Unsigned8 sin_family = new Unsigned8();
+        public final Unsigned16 sin_port = new Unsigned16();
+        public final Unsigned32 sin_addr = new Unsigned32();
+        public final Signed8[] sin_zero = array(new Signed8[8]);
+    }
+    static class SockAddrIN extends SockAddr {
+
+        public final Unsigned16 sin_family = new Unsigned16();
         public final Unsigned16 sin_port = new Unsigned16();
         public final Unsigned32 sin_addr = new Unsigned32();
         public final Signed8[] sin_zero = array(new Signed8[8]);
@@ -39,26 +50,41 @@ public class TCPServer {
         int socket(int domain, int type, int protocol);
         int close(int fd);
         int listen(int fd, int backlog);
-        int bind(int fd, sockaddr_in addr, int len);
-        int accept(int fd, @Out sockaddr_in addr, int[] len);
+        int bind(int fd, SockAddr addr, int len);
+        int accept(int fd, @Out SockAddr addr, int[] len);
         int read(int fd, @Out ByteBuffer data, int len);
         int read(int fd, @Out byte[] data, int len);
         int write(int fd, @In ByteBuffer data, int len);
+        String strerror(int error);
     }
     static short htons(short val) {
-        return (short) (((val >> 8) & 0xff) | ((val & 0xff) << 8));
+        return Short.reverseBytes(val);
     }
     static NativeSelectableChannel serverSocket(int port) {
         int fd = libc.socket(LibC.AF_INET, LibC.SOCK_STREAM, 0);
         System.out.println("fd=" + fd);
-        sockaddr_in sin = new sockaddr_in();
-        sin.sin_family.set((byte) LibC.AF_INET);
-        sin.sin_port.set(htons((short) port));
-
-        int rc = libc.bind(fd, sin, StructUtil.getSize(sin));
-        System.out.println("bind() returned " + rc);
-        rc = libc.listen(fd, 5);
-        System.out.println("listen() returned " + rc);
+        SockAddr addr;
+        if (Platform.getPlatform().isBSD()) {
+            BSDSockAddrIN sin = new BSDSockAddrIN();
+            sin.sin_family.set((byte) LibC.AF_INET);
+            sin.sin_port.set(htons((short) port));
+            addr = sin;
+        } else {
+            SockAddrIN sin = new SockAddrIN();
+            sin.sin_family.set(htons((short) LibC.AF_INET));
+            sin.sin_port.set(htons((short) port));
+            addr = sin;
+        }
+        System.out.println("sizeof addr=" + StructUtil.getSize(addr));
+        if (libc.bind(fd, addr, StructUtil.getSize(addr)) < 0) {
+            System.err.println("bind failed: " + libc.strerror(LastError.getLastError()));
+            System.exit(1);
+        }
+        if (libc.listen(fd, 5) < 0) {
+            System.err.println("listen failed: " + libc.strerror(LastError.getLastError()));
+            System.exit(1);
+        }
+        System.out.println("bind+listen succeeded");
         return NativeSelectableChannel.forServerSocket(fd);
     }
     private static abstract class IO {
@@ -76,7 +102,7 @@ public class TCPServer {
             super(selector, ch);
         }
         public void read() {
-            sockaddr_in sin = new sockaddr_in();
+            SockAddrIN sin = new SockAddrIN();
             int[] addrSize = { StructUtil.getSize(sin) };
             int clientfd = libc.accept(channel.getFD(), sin, addrSize);
             System.out.println("client fd = " + clientfd);

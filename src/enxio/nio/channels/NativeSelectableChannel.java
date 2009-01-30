@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package enxio;
+package enxio.nio.channels;
 
 import com.kenai.jaffl.Library;
 import com.kenai.jaffl.annotations.In;

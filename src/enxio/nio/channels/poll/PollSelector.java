@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package enxio.poll;
+package enxio.nio.channels.poll;
 
 import com.kenai.jaffl.Library;
 import com.kenai.jaffl.annotations.In;
@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import enxio.NativeSelectableChannel;
+import enxio.nio.channels.NativeSelectableChannel;
 
 /**
  *

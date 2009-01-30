@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package enxio.kqueue;
+package enxio.nio.channels.kqueue;
 
 import com.kenai.jaffl.Library;
 import com.kenai.jaffl.Platform;
@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import enxio.NativeSelectableChannel;
-import enxio.NativeSelectorProvider;
+import enxio.nio.channels.NativeSelectableChannel;
+import enxio.nio.channels.NativeSelectorProvider;
 
 /**
  *
