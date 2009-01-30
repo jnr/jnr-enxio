@@ -265,7 +265,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
     }
     private static abstract class EventIO {
         public static EventIO getInstance() {
-            return Platform.is64() ? EventIO64.INSTANCE : EventIO32.INSTANCE;
+            return Platform.getPlatform().addressSize() == 64 ? EventIO64.INSTANCE : EventIO32.INSTANCE;
         }
         abstract int size();
         abstract void clear(ByteBuffer buf, int index);

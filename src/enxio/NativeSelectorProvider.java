@@ -39,7 +39,7 @@ public final class NativeSelectorProvider extends SelectorProvider {
 
     @Override
     public AbstractSelector openSelector() throws IOException {
-        return Platform.isBSD() ? new KQSelector(this) : new PollSelector(this);
+        return Platform.getPlatform().isBSD() ? new KQSelector(this) : new PollSelector(this);
     }
 
     @Override
