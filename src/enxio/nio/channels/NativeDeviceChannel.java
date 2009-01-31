@@ -1,3 +1,8 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
 package enxio.nio.channels;
 
 import java.io.IOException;
@@ -7,29 +12,25 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.spi.AbstractSelectableChannel;
 import java.nio.channels.spi.SelectorProvider;
 
-public class NativeSelectableChannel extends AbstractSelectableChannel
-        implements ByteChannel {
-    
+/**
+ *
+ * @author wayne
+ */
+public class NativeDeviceChannel extends AbstractSelectableChannel implements ByteChannel {
+
     private final int fd;
     private final int validOps;
 
-    public NativeSelectableChannel(SelectorProvider provider, int fd, int ops) {
+    public NativeDeviceChannel(SelectorProvider provider, int fd, int ops) {
         super(provider);
         this.fd = fd;
         this.validOps = ops;
-    }
-    public static NativeSelectableChannel forSocket(int fd) {
-        return new NativeSelectableChannel(NativeSelectorProvider.getInstance(), fd,
-                SelectionKey.OP_READ | SelectionKey.OP_WRITE | SelectionKey.OP_CONNECT | SelectionKey.OP_ACCEPT);
-    }
-    public static NativeSelectableChannel forServerSocket(int fd) {
-        return forSocket(fd);
     }
     public static NativeSelectableChannel forDevice(int fd) {
         return new NativeSelectableChannel(NativeSelectorProvider.getInstance(), fd,
                 SelectionKey.OP_READ | SelectionKey.OP_WRITE);
     }
-    
+
     @Override
     protected void implCloseSelectableChannel() throws IOException {
        Native.close(fd);
