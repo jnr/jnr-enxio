@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 package enxio.nio.channels.kqueue;
 
@@ -12,10 +8,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectionKey;
 import enxio.nio.channels.NativeSelectableChannel;
 
-/**
- *
- * @author wayne
- */
 class KQSelectionKey extends AbstractSelectionKey {
     private final KQSelector selector;
     private final NativeSelectableChannel channel;
@@ -33,7 +25,7 @@ class KQSelectionKey extends AbstractSelectionKey {
 
     @Override
     public SelectableChannel channel() {
-        return channel;
+        return (SelectableChannel) channel;
     }
 
     @Override

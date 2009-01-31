@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 package enxio.nio.channels.poll;
 
@@ -11,10 +7,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectionKey;
 import enxio.nio.channels.NativeSelectableChannel;
 
-/**
- *
- * @author wayne
- */
 class PollSelectionKey extends AbstractSelectionKey {
     private final PollSelector selector;
     private final NativeSelectableChannel channel;
@@ -39,7 +31,7 @@ class PollSelectionKey extends AbstractSelectionKey {
     
     @Override
     public SelectableChannel channel() {
-        return channel;
+        return (SelectableChannel) channel;
     }
 
     @Override

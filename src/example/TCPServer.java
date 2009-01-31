@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 package example;
 
@@ -19,6 +15,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import enxio.nio.channels.NativeSelectableChannel;
 import enxio.nio.channels.NativeSelectorProvider;
+import enxio.nio.channels.NativeServerSocketChannel;
+import enxio.nio.channels.NativeSocketChannel;
+import java.nio.channels.SelectableChannel;
 
 /**
  *
@@ -60,7 +59,7 @@ public class TCPServer {
     static short htons(short val) {
         return Short.reverseBytes(val);
     }
-    static NativeSelectableChannel serverSocket(int port) {
+    static NativeServerSocketChannel serverSocket(int port) {
         int fd = libc.socket(LibC.AF_INET, LibC.SOCK_STREAM, 0);
         System.out.println("fd=" + fd);
         SockAddr addr;
@@ -85,12 +84,12 @@ public class TCPServer {
             System.exit(1);
         }
         System.out.println("bind+listen succeeded");
-        return NativeSelectableChannel.forServerSocket(fd);
+        return new NativeServerSocketChannel(fd);
     }
     private static abstract class IO {
-        protected final NativeSelectableChannel channel;
+        protected final SelectableChannel channel;
         protected final Selector selector;
-        public IO(Selector selector, NativeSelectableChannel ch) {
+        public IO(Selector selector, SelectableChannel ch) {
             this.selector = selector;
             this.channel = ch;
         }
@@ -98,15 +97,15 @@ public class TCPServer {
         public abstract void write();
     }
     private static class Accepter extends IO {
-        public Accepter(Selector selector, NativeSelectableChannel ch) {
+        public Accepter(Selector selector, NativeServerSocketChannel ch) {
             super(selector, ch);
         }
         public void read() {
             SockAddrIN sin = new SockAddrIN();
             int[] addrSize = { StructUtil.getSize(sin) };
-            int clientfd = libc.accept(channel.getFD(), sin, addrSize);
+            int clientfd = libc.accept(((NativeSelectableChannel) channel).getFD(), sin, addrSize);
             System.out.println("client fd = " + clientfd);
-            NativeSelectableChannel ch = NativeSelectableChannel.forSocket(clientfd);
+            NativeSocketChannel ch = new NativeSocketChannel(clientfd);
             try {
                 ch.configureBlocking(false);
                 ch.register(selector, SelectionKey.OP_READ, new Client(selector, ch));
@@ -120,16 +119,16 @@ public class TCPServer {
     }
     private static class Client extends IO {
         private final ByteBuffer buf = ByteBuffer.allocateDirect(1024);
-        public Client(Selector selector, NativeSelectableChannel ch) {
+        public Client(Selector selector, NativeSocketChannel ch) {
             super(selector, ch);
         }
         public void read() {
-            int n = libc.read(channel.getFD(), buf, buf.remaining());
+            int n = libc.read(((NativeSelectableChannel) channel).getFD(), buf, buf.remaining());
             System.out.println("Read " + n + " bytes from client");
             if (n <= 0) {
                 SelectionKey k = channel.keyFor(selector);
                 k.cancel();
-                libc.close(channel.getFD());
+                libc.close(((NativeSelectableChannel) channel).getFD());
                 return;
             }
             buf.position(n);
@@ -138,7 +137,7 @@ public class TCPServer {
         }
         public void write() {
             while (buf.hasRemaining()) {
-                int n = libc.write(channel.getFD(), buf, buf.remaining());
+                int n = libc.write(((NativeSelectableChannel) channel).getFD(), buf, buf.remaining());
                 System.out.println("write returned " + n);
                 if (n > 0) {
                     buf.position(buf.position() + n);
@@ -148,7 +147,7 @@ public class TCPServer {
                 }
                 if (n < 0) {
                     channel.keyFor(selector).cancel();
-                    libc.close(channel.getFD());
+                    libc.close(((NativeSelectableChannel) channel).getFD());
                     return;
                 }
             }
@@ -162,7 +161,7 @@ public class TCPServer {
         try {
             Selector selector = NativeSelectorProvider.getInstance().openSelector();
             for (int i = 0; i < 2; ++i) {
-                NativeSelectableChannel ch = serverSocket(baseport + i);
+                NativeServerSocketChannel ch = serverSocket(baseport + i);
                 ch.configureBlocking(false);
                 ch.register(selector, SelectionKey.OP_ACCEPT, new Accepter(selector, ch));
             }
