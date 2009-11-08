@@ -19,7 +19,7 @@ is divided into following sections:
   - cleanup
 
         -->
-<project xmlns:j2seproject1="http://www.netbeans.org/ns/j2se-project/1" xmlns:j2seproject3="http://www.netbeans.org/ns/j2se-project/3" xmlns:jaxrpc="http://www.netbeans.org/ns/j2se-project/jax-rpc" basedir=".." default="default" name="enxio-impl">
+<project xmlns:j2seproject1="http://www.netbeans.org/ns/j2se-project/1" xmlns:j2seproject3="http://www.netbeans.org/ns/j2se-project/3" xmlns:jaxrpc="http://www.netbeans.org/ns/j2se-project/jax-rpc" basedir=".." default="default" name="jnr-enxio-impl">
     <fail message="Please build using Ant 1.7.1 or higher.">
         <condition>
             <not>
@@ -378,7 +378,7 @@ is divided into following sections:
         <mkdir dir="${build.dir}"/>
         <touch file="${built-jar.properties}" verbose="false"/>
         <property file="${built-jar.properties}" prefix="already.built.jar."/>
-        <fail message="Cycle detected: enxio was already built">
+        <fail message="Cycle detected: jnr-enxio was already built">
             <condition>
                 <isset property="already.built.jar.${basedir}"/>
             </condition>
@@ -783,7 +783,7 @@ is divided into following sections:
         <mkdir dir="${build.dir}"/>
         <touch file="${built-clean.properties}" verbose="false"/>
         <property file="${built-clean.properties}" prefix="already.built.clean."/>
-        <fail message="Cycle detected: enxio was already built">
+        <fail message="Cycle detected: jnr-enxio was already built">
             <condition>
                 <isset property="already.built.clean.${basedir}"/>
             </condition>

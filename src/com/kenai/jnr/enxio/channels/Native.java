@@ -1,5 +1,5 @@
 
-package enxio.nio.channels;
+package com.kenai.jnr.enxio.channels;
 
 import com.kenai.jaffl.LastError;
 import com.kenai.jaffl.Library;

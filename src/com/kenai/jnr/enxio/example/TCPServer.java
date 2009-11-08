@@ -1,5 +1,5 @@
 
-package example;
+package com.kenai.jnr.enxio.example;
 
 import com.kenai.jaffl.LastError;
 import com.kenai.jaffl.Library;
@@ -13,10 +13,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import enxio.nio.channels.NativeSelectableChannel;
-import enxio.nio.channels.NativeSelectorProvider;
-import enxio.nio.channels.NativeServerSocketChannel;
-import enxio.nio.channels.NativeSocketChannel;
+import com.kenai.jnr.enxio.channels.NativeSelectableChannel;
+import com.kenai.jnr.enxio.channels.NativeSelectorProvider;
+import com.kenai.jnr.enxio.channels.NativeServerSocketChannel;
+import com.kenai.jnr.enxio.channels.NativeSocketChannel;
 import java.nio.channels.SelectableChannel;
 
 /**
