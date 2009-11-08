@@ -24,9 +24,14 @@ import java.nio.channels.SelectableChannel;
  * @author wayne
  */
 public class TCPServer {
-    static final LibC libc = Library.loadLibrary("c", LibC.class);
-    static class SockAddr extends Struct {
+    static final String[] libnames = Platform.getPlatform().getOS() == Platform.OS.SOLARIS
+                        ? new String[] { "socket", "nsl", "c" }
+                        : new String[] { "c" };
+    static final LibC libc = Library.loadLibrary(LibC.class, libnames);
+
+    public static class SockAddr extends Struct {
     }
+
     static class BSDSockAddrIN extends SockAddr {
 
         public final Unsigned8 sin_len = new Unsigned8();
@@ -35,6 +40,7 @@ public class TCPServer {
         public final Unsigned32 sin_addr = new Unsigned32();
         public final Signed8[] sin_zero = array(new Signed8[8]);
     }
+
     static class SockAddrIN extends SockAddr {
 
         public final Unsigned16 sin_family = new Unsigned16();
@@ -42,9 +48,10 @@ public class TCPServer {
         public final Unsigned32 sin_addr = new Unsigned32();
         public final Signed8[] sin_zero = array(new Signed8[8]);
     }
-    private static interface LibC {
-        static final int AF_INET = 2;
-        static final int SOCK_STREAM = 1;
+
+    public static interface LibC {
+        static final int AF_INET = com.kenai.constantine.platform.AddressFamily.AF_INET.value();
+        static final int SOCK_STREAM = com.kenai.constantine.platform.Sock.SOCK_STREAM.value();
 
         int socket(int domain, int type, int protocol);
         int close(int fd);

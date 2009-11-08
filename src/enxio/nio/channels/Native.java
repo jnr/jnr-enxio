@@ -39,6 +39,7 @@ class Native {
         }
         return n;
     }
+
     public static void setBlocking(int fd, boolean block) {
         int flags = libc.fcntl(fd, LibC.F_GETFL, 0);
         if (block) {
@@ -48,13 +49,15 @@ class Native {
         }
         libc.fcntl(fd, LibC.F_SETFL, flags);
     }
+
     public static String getLastErrorString() {
         return libc.strerror(LastError.getLastError());
     }
-    private static interface LibC {
-        public static final int F_GETFL = 3;
-        public static final int F_SETFL = 4;
-        public static final int O_NONBLOCK = 4;
+
+    public static interface LibC {
+        public static final int F_GETFL = com.kenai.constantine.platform.Fcntl.F_GETFL.value();
+        public static final int F_SETFL = com.kenai.constantine.platform.Fcntl.F_SETFL.value();
+        public static final int O_NONBLOCK = com.kenai.constantine.platform.OpenFlags.O_NONBLOCK.value();
 
         public int close(int fd);
         public int read(int fd, @Out ByteBuffer data, int size);

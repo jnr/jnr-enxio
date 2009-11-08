@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 package enxio.nio.channels.poll;
 
@@ -24,8 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import enxio.nio.channels.NativeSelectableChannel;
 
 /**
- *
- * @author wayne
+ * An implementation of a {@link java.nio.channels.Selector} that uses good old
+ * poll(2)
  */
 public class PollSelector extends java.nio.channels.spi.AbstractSelector {
     private static final LibC libc = Library.loadLibrary("c", LibC.class);
@@ -207,15 +203,18 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         }
         return n;
     }
+
     private void wakeupReceived() {
         libc.read(pipefd[0], ByteBuffer.allocate(1), 1);
     }
+
     @Override
     public Selector wakeup() {
         libc.write(pipefd[1], ByteBuffer.allocate(1), 1);
         return this;
     }
-    private static interface LibC {
+
+    public static interface LibC {
         static final int POLLIN = 0x1;
         static final int POLLOUT = 0x4;
         static final int POLLERR = 0x8;

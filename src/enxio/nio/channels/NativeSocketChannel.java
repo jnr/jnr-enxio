@@ -1,6 +1,8 @@
 
 package enxio.nio.channels;
 
+import com.kenai.constantine.platform.Errno;
+import com.kenai.jaffl.LastError;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
@@ -17,9 +19,11 @@ public class NativeSocketChannel extends AbstractSelectableChannel
     public NativeSocketChannel(int fd) {
         this(NativeSelectorProvider.getInstance(), fd, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
     }
+
     public NativeSocketChannel(int fd, int ops) {
         this(NativeSelectorProvider.getInstance(), fd, ops);
     }
+
     NativeSocketChannel(SelectorProvider provider, int fd, int ops) {
         super(provider);
         this.fd = fd;
@@ -49,7 +53,14 @@ public class NativeSocketChannel extends AbstractSelectableChannel
             case 0:
                 return -1;
             case -1:
-                throw new IOException(Native.getLastErrorString());
+                switch (Errno.valueOf(LastError.getLastError())) {
+                    case EAGAIN:
+                    case EWOULDBLOCK:
+                        return 0;
+
+                    default:
+                        throw new IOException(Native.getLastErrorString());
+                }
             default:
                 return n;
         }

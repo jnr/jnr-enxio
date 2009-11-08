@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 package enxio.nio.channels.kqueue;
 
@@ -28,8 +24,8 @@ import enxio.nio.channels.NativeSelectableChannel;
 import enxio.nio.channels.NativeSelectorProvider;
 
 /**
- *
- * @author wayne
+ * An implementation of a {@link java.nio.channels.Selector} that uses the BSD (including MacOS)
+ * kqueue(2) mechanism
  */
 public class KQSelector extends java.nio.channels.spi.AbstractSelector {
     private static final LibC libc = Library.loadLibrary("c", LibC.class);
@@ -51,6 +47,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
             = new ConcurrentHashMap<Integer, Descriptor>();
     private final Set<SelectionKey> selected = new LinkedHashSet<SelectionKey>();
     private final Set<Descriptor> changed = new LinkedHashSet<Descriptor>();
+    private final Timespec ZERO_TIMESPEC = new Timespec(0, 0);
     
     public KQSelector(NativeSelectorProvider provider) {
         super(provider);
@@ -63,7 +60,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         io.putFD(changebuf, 0, pipefd[0]);
         io.putFilter(changebuf, 0, EVFILT_READ);
         io.putFlags(changebuf, 0, EV_ADD);
-        libc.kevent(kqfd, changebuf, 1, null, 0, new Timespec(0, 0));
+        libc.kevent(kqfd, changebuf, 1, null, 0, ZERO_TIMESPEC);
     }
 
     private static class Descriptor {
@@ -152,7 +149,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         changed.remove(d);
                     }
                     if (nchanged >= MAX_EVENTS) {
-                        libc.kevent(kqfd, changebuf, nchanged, null, 0, new Timespec(0, 0));
+                        libc.kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
                         nchanged = 0;
                     }
                 }
@@ -200,7 +197,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         io.put(changebuf, nchanged++, d.fd, filt, flags);
                     }
                     if (nchanged >= MAX_EVENTS) {
-                        libc.kevent(kqfd, changebuf, nchanged, null, 0, new Timespec(0, 0));
+                        libc.kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
                         nchanged = 0;
                     }
                 }
@@ -264,23 +261,50 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         }
     }
     private static abstract class EventIO {
+        private final int eventSize, identOffset, filterOffset, flagsOffset;
+
         public static EventIO getInstance() {
             return Platform.getPlatform().addressSize() == 64 ? EventIO64.INSTANCE : EventIO32.INSTANCE;
         }
-        abstract int size();
+
+        public EventIO(int eventSize, int identOffset, int filterOffset, int flagsOffset) {
+            this.eventSize = eventSize;
+            this.identOffset = identOffset;
+            this.filterOffset = filterOffset;
+            this.flagsOffset = flagsOffset;
+        }
+
+
         abstract void clear(ByteBuffer buf, int index);
         abstract void putFD(ByteBuffer buf, int index,int fd);
         abstract int getFD(ByteBuffer buf, int index);
-        abstract void putFilter(ByteBuffer buf, int index, int filter);
-        abstract int getFilter(ByteBuffer buf, int index);
-        abstract void putFlags(ByteBuffer buf, int index, int flags);
-        abstract int getFlags(ByteBuffer buf, int index);
+
         public final void put(ByteBuffer buf, int index, int fd, int filt, int flags) {
             putFD(buf, index, fd);
             putFilter(buf, index, filt);
             putFlags(buf, index, flags);
         }
+        
+        public final int size() {
+            return eventSize;
+        }
+
+        public final void putFilter(ByteBuffer buf, int index, int filter) {
+            buf.putShort(eventSize * index + filterOffset, (short) filter);
+        }
+        public final int getFilter(ByteBuffer buf, int index) {
+            return buf.getShort(eventSize * index + filterOffset);
+        }
+
+        public final void putFlags(ByteBuffer buf, int index, int flags) {
+            buf.putShort(eventSize * index + flagsOffset, (short) flags);
+        }
+
+        public final int getFlags(ByteBuffer buf, int index) {
+            return buf.getShort(eventSize * index + flagsOffset);
+        }
     }
+
     private static final class EventIO32 extends EventIO {
         public static final EventIO INSTANCE = new EventIO32();
         static final int EVENT_SIZE = 20;
@@ -288,9 +312,11 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         static final int FILTER_OFFSET = IDENT_OFFSET + 4;
         static final int FLAGS_OFFSET = FILTER_OFFSET + 2;
 
-        public final int size() {
-            return EVENT_SIZE;
+        public EventIO32() {
+            super(EVENT_SIZE, IDENT_OFFSET, FILTER_OFFSET, FLAGS_OFFSET);
         }
+
+
         public void clear(ByteBuffer buf, int index) {
             buf.putLong(index, 0L);
             buf.putLong(index + 8, 0L);
@@ -302,19 +328,8 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         public int getFD(ByteBuffer buf, int index) {
             return buf.getInt(EVENT_SIZE * index + IDENT_OFFSET);
         }
-        public void putFilter(ByteBuffer buf, int index, int filter) {
-            buf.putShort(EVENT_SIZE * index + FILTER_OFFSET, (short) filter);
-        }
-        public int getFilter(ByteBuffer buf, int index) {
-            return buf.getShort(EVENT_SIZE * index + FILTER_OFFSET);
-        }
-        public void putFlags(ByteBuffer buf, int index, int flags) {
-            buf.putShort(EVENT_SIZE * index + FLAGS_OFFSET, (short) flags);
-        }
-        public int getFlags(ByteBuffer buf, int index) {
-            return buf.getShort(EVENT_SIZE * index + FLAGS_OFFSET);
-        }
     }
+
     private static final class EventIO64 extends EventIO {
         public static final EventIO INSTANCE = new EventIO64();
         static final int EVENT_SIZE = 32;
@@ -325,36 +340,33 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         static final int DATA_OFFSET = FFLAGS_OFFSET + 4;
         static final int UDATA_OFFSET = DATA_OFFSET + 8;
 
-        public int size() {
-            return EVENT_SIZE;
+        public EventIO64() {
+            super(EVENT_SIZE, IDENT_OFFSET, FILTER_OFFSET, FLAGS_OFFSET);
         }
+
         public void clear(ByteBuffer buf, int index) {
             for (int i = 0; i < 4; ++i) {
                 buf.putLong(index + (i * 8), 0L);
             }
         }
+
         public void putFD(ByteBuffer buf, int index, int fd) {
             buf.putLong(EVENT_SIZE * index + IDENT_OFFSET, fd);
         }
+
         public int getFD(ByteBuffer buf, int index) {
             return (int) buf.getLong(EVENT_SIZE * index + IDENT_OFFSET);
         }
-        public void putFilter(ByteBuffer buf, int index, int filter) {
-            buf.putShort(EVENT_SIZE * index + FILTER_OFFSET, (short) filter);
-        }
-        public int getFilter(ByteBuffer buf, int index) {
-            return buf.getShort(EVENT_SIZE * index + FILTER_OFFSET);
-        }
-        public void putFlags(ByteBuffer buf, int index, int flags) {
-            buf.putShort(EVENT_SIZE * index + FLAGS_OFFSET, (short) flags);
-        }
-        public int getFlags(ByteBuffer buf, int index) {
-            return buf.getShort(EVENT_SIZE * index + FLAGS_OFFSET);
-        }
     }
+
     static class Timespec extends Struct {
         public final SignedLong tv_sec = new SignedLong();
         public final SignedLong tv_nsec = new SignedLong();
+
+        public Timespec() {
+
+        }
+
         public Timespec(long sec, long nsec) {
             tv_sec.set(sec);
             tv_nsec.set(nsec);
