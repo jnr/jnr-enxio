@@ -16,7 +16,7 @@
 
 package jnr.enxio.channels;
 
-import com.kenai.constantine.platform.Errno;
+import jnr.constants.platform.Errno;
 import com.kenai.jaffl.LastError;
 import java.io.IOException;
 import java.nio.ByteBuffer;

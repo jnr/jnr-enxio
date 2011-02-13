@@ -65,8 +65,8 @@ public class TCPServer {
     }
 
     public static interface LibC {
-        static final int AF_INET = com.kenai.constantine.platform.AddressFamily.AF_INET.value();
-        static final int SOCK_STREAM = com.kenai.constantine.platform.Sock.SOCK_STREAM.value();
+        static final int AF_INET = jnr.constants.platform.AddressFamily.AF_INET.intValue();
+        static final int SOCK_STREAM = jnr.constants.platform.Sock.SOCK_STREAM.intValue();
 
         int socket(int domain, int type, int protocol);
         int close(int fd);

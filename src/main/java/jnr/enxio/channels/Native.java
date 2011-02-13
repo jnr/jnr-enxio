@@ -70,9 +70,9 @@ class Native {
     }
 
     public static interface LibC {
-        public static final int F_GETFL = com.kenai.constantine.platform.Fcntl.F_GETFL.value();
-        public static final int F_SETFL = com.kenai.constantine.platform.Fcntl.F_SETFL.value();
-        public static final int O_NONBLOCK = com.kenai.constantine.platform.OpenFlags.O_NONBLOCK.value();
+        public static final int F_GETFL = jnr.constants.platform.Fcntl.F_GETFL.intValue();
+        public static final int F_SETFL = jnr.constants.platform.Fcntl.F_SETFL.intValue();
+        public static final int O_NONBLOCK = jnr.constants.platform.OpenFlags.O_NONBLOCK.intValue();
 
         public int close(int fd);
         public int read(int fd, @Out ByteBuffer data, int size);
