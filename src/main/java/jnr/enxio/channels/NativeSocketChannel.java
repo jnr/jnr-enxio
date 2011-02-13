@@ -14,7 +14,7 @@
  * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.kenai.jnr.enxio.channels;
+package jnr.enxio.channels;
 
 import com.kenai.constantine.platform.Errno;
 import com.kenai.jaffl.LastError;

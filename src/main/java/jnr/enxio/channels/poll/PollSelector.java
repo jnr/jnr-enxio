@@ -14,7 +14,7 @@
  * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.kenai.jnr.enxio.channels.poll;
+package jnr.enxio.channels.poll;
 
 import com.kenai.jaffl.Library;
 import com.kenai.jaffl.annotations.In;
@@ -32,7 +32,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import com.kenai.jnr.enxio.channels.NativeSelectableChannel;
+import jnr.enxio.channels.NativeSelectableChannel;
 
 /**
  * An implementation of a {@link java.nio.channels.Selector} that uses good old

@@ -14,7 +14,7 @@
  * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.kenai.jnr.enxio.example;
+package jnr.enxio.example;
 
 import com.kenai.jaffl.LastError;
 import com.kenai.jaffl.Library;
@@ -28,10 +28,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import com.kenai.jnr.enxio.channels.NativeSelectableChannel;
-import com.kenai.jnr.enxio.channels.NativeSelectorProvider;
-import com.kenai.jnr.enxio.channels.NativeServerSocketChannel;
-import com.kenai.jnr.enxio.channels.NativeSocketChannel;
+import jnr.enxio.channels.NativeSelectableChannel;
+import jnr.enxio.channels.NativeSelectorProvider;
+import jnr.enxio.channels.NativeServerSocketChannel;
+import jnr.enxio.channels.NativeSocketChannel;
 import java.nio.channels.SelectableChannel;
 
 /**

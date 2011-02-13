@@ -14,14 +14,14 @@
  * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.kenai.jnr.enxio.channels.kqueue;
+package jnr.enxio.channels.kqueue;
 
 
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectionKey;
-import com.kenai.jnr.enxio.channels.NativeSelectableChannel;
+import jnr.enxio.channels.NativeSelectableChannel;
 
 class KQSelectionKey extends AbstractSelectionKey {
     private final KQSelector selector;

@@ -14,7 +14,7 @@
  * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.kenai.jnr.enxio.channels.kqueue;
+package jnr.enxio.channels.kqueue;
 
 import com.kenai.jaffl.Library;
 import com.kenai.jaffl.Platform;
@@ -35,8 +35,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import com.kenai.jnr.enxio.channels.NativeSelectableChannel;
-import com.kenai.jnr.enxio.channels.NativeSelectorProvider;
+import jnr.enxio.channels.NativeSelectableChannel;
+import jnr.enxio.channels.NativeSelectorProvider;
 
 /**
  * An implementation of a {@link java.nio.channels.Selector} that uses the BSD (including MacOS)

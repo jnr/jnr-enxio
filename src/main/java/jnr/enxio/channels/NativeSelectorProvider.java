@@ -14,7 +14,7 @@
  * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.kenai.jnr.enxio.channels;
+package jnr.enxio.channels;
 
 import com.kenai.jaffl.Platform;
 import java.io.IOException;
@@ -24,8 +24,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelector;
 import java.nio.channels.spi.SelectorProvider;
-import com.kenai.jnr.enxio.channels.kqueue.KQSelector;
-import com.kenai.jnr.enxio.channels.poll.PollSelector;
+import jnr.enxio.channels.kqueue.KQSelector;
+import jnr.enxio.channels.poll.PollSelector;
 
 
 public final class NativeSelectorProvider extends SelectorProvider {
