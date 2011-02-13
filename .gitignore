@@ -1,0 +1,10 @@
+build
+target
+nbproject/private
+dist
+*.orig$
+*.rej$
+*.class$
+*~
+.idea
+*.iml
