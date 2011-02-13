@@ -26,10 +26,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 class Native {
-    private static final LibC libc = Library.loadLibrary("c", LibC.class);
+    private static final class LibCHolder {
+        private static final LibC libc = Library.loadLibrary("c", LibC.class);
+    }
+
+    private static LibC libc() {
+        return LibCHolder.libc;
+    }
 
     public static int close(int fd) {
-        return libc.close(fd);
+        return libc().close(fd);
     }
     public static int read(int fd, ByteBuffer dst) throws IOException {
         if (dst == null) {
@@ -39,7 +45,7 @@ class Native {
             throw new IllegalArgumentException("Read-only buffer");
         }
 
-        int n = libc.read(fd, dst, dst.remaining());
+        int n = libc().read(fd, dst, dst.remaining());
         if (n > 0) {
             dst.position(dst.position() + n);
         }
@@ -50,7 +56,7 @@ class Native {
         if (src == null) {
             throw new NullPointerException("Source buffer cannot be null");
         }
-        int n = libc.write(fd, src, src.remaining());
+        int n = libc().write(fd, src, src.remaining());
         if (n > 0) {
             src.position(src.position() + n);
         }
@@ -58,17 +64,17 @@ class Native {
     }
 
     public static void setBlocking(int fd, boolean block) {
-        int flags = libc.fcntl(fd, LibC.F_GETFL, 0);
+        int flags = libc().fcntl(fd, LibC.F_GETFL, 0);
         if (block) {
             flags &= ~LibC.O_NONBLOCK;
         } else {
             flags |= LibC.O_NONBLOCK;
         }
-        libc.fcntl(fd, LibC.F_SETFL, flags);
+        libc().fcntl(fd, LibC.F_SETFL, flags);
     }
 
     public static String getLastErrorString() {
-        return libc.strerror(LastError.getLastError());
+        return libc().strerror(LastError.getLastError());
     }
 
     public static interface LibC {
