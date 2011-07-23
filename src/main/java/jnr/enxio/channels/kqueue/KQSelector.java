@@ -390,7 +390,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         }
     }
 
-    private static interface LibC {
+    public static interface LibC {
         
         public int kqueue();
         public int kevent(int kq, @In ByteBuffer changebuf, int nchanges,
