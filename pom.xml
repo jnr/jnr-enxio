@@ -61,15 +61,14 @@
     </dependency>
     <dependency>
       <groupId>org.jruby.extras</groupId>
-      <artifactId>jaffl</artifactId>
-      <version>0.5.9</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jruby.extras</groupId>
       <artifactId>jnr-constants</artifactId>
       <version>0.8</version>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.jnr</groupId>
+      <artifactId>jnr-ffi</artifactId>
+      <version>0.6.0</version>
     </dependency>
   </dependencies>
   <build>

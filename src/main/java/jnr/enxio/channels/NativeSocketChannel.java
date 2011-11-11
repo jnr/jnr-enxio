@@ -19,7 +19,7 @@
 package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
-import com.kenai.jaffl.LastError;
+import jnr.ffi.LastError;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
@@ -70,7 +70,7 @@ public class NativeSocketChannel extends AbstractSelectableChannel
             case 0:
                 return -1;
             case -1:
-                switch (Errno.valueOf(LastError.getLastError())) {
+                switch (Errno.valueOf(LastError.getLastError(Native.runtime))) {
                     case EAGAIN:
                     case EWOULDBLOCK:
                         return 0;

@@ -18,7 +18,7 @@
 
 package jnr.enxio.channels;
 
-import com.kenai.jaffl.Platform;
+import jnr.ffi.Platform;
 import java.io.IOException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.Pipe;

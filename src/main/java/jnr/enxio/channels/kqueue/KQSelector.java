@@ -18,12 +18,12 @@
 
 package jnr.enxio.channels.kqueue;
 
-import com.kenai.jaffl.Library;
-import com.kenai.jaffl.Platform;
-import com.kenai.jaffl.annotations.In;
-import com.kenai.jaffl.annotations.Out;
-import com.kenai.jaffl.annotations.Transient;
-import com.kenai.jaffl.struct.Struct;
+import jnr.ffi.Library;
+import jnr.ffi.Platform;
+import jnr.ffi.annotations.In;
+import jnr.ffi.annotations.Out;
+import jnr.ffi.annotations.Transient;
+import jnr.ffi.Struct;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -375,16 +375,19 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
             return (int) buf.getLong(EVENT_SIZE * index + IDENT_OFFSET);
         }
     }
+    
+    private static final jnr.ffi.Runtime runtime = jnr.ffi.Runtime.getSystemRuntime();
 
     static class Timespec extends Struct {
         public final SignedLong tv_sec = new SignedLong();
         public final SignedLong tv_nsec = new SignedLong();
 
         public Timespec() {
-
+             super(runtime);
         }
 
         public Timespec(long sec, long nsec) {
+            super(runtime);
             tv_sec.set(sec);
             tv_nsec.set(nsec);
         }

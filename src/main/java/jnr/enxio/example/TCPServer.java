@@ -18,14 +18,13 @@
 
 package jnr.enxio.example;
 
-import com.kenai.jaffl.LastError;
-import com.kenai.jaffl.Library;
-import com.kenai.jaffl.Platform;
-import com.kenai.jaffl.annotations.In;
-import com.kenai.jaffl.annotations.Out;
-//import com.kenai.jaffl.byref.IntByReference;
-import com.kenai.jaffl.struct.Struct;
-import com.kenai.jaffl.struct.StructUtil;
+import jnr.ffi.LastError;
+import jnr.ffi.Library;
+import jnr.ffi.Platform;
+import jnr.ffi.annotations.In;
+import jnr.ffi.annotations.Out;
+//import jnr.ffi.byref.IntByReference;
+import jnr.ffi.Struct;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -45,8 +44,12 @@ public class TCPServer {
                         ? new String[] { "socket", "nsl", "c" }
                         : new String[] { "c" };
     static final LibC libc = Library.loadLibrary(LibC.class, libnames);
+    static final jnr.ffi.Runtime runtime = jnr.ffi.Runtime.getSystemRuntime();
 
     public static class SockAddr extends Struct {
+        public SockAddr() {
+            super(runtime);
+        }
     }
 
     static class BSDSockAddrIN extends SockAddr {
@@ -98,13 +101,13 @@ public class TCPServer {
             sin.sin_port.set(htons((short) port));
             addr = sin;
         }
-        System.out.println("sizeof addr=" + StructUtil.getSize(addr));
-        if (libc.bind(fd, addr, StructUtil.getSize(addr)) < 0) {
-            System.err.println("bind failed: " + libc.strerror(LastError.getLastError()));
+        System.out.println("sizeof addr=" + Struct.size(addr));
+        if (libc.bind(fd, addr, Struct.size(addr)) < 0) {
+            System.err.println("bind failed: " + libc.strerror(LastError.getLastError(runtime)));
             System.exit(1);
         }
         if (libc.listen(fd, 5) < 0) {
-            System.err.println("listen failed: " + libc.strerror(LastError.getLastError()));
+            System.err.println("listen failed: " + libc.strerror(LastError.getLastError(runtime)));
             System.exit(1);
         }
         System.out.println("bind+listen succeeded");
@@ -126,7 +129,7 @@ public class TCPServer {
         }
         public void read() {
             SockAddrIN sin = new SockAddrIN();
-            int[] addrSize = { StructUtil.getSize(sin) };
+            int[] addrSize = { Struct.size(sin) };
             int clientfd = libc.accept(((NativeSelectableChannel) channel).getFD(), sin, addrSize);
             System.out.println("client fd = " + clientfd);
             NativeSocketChannel ch = new NativeSocketChannel(clientfd);

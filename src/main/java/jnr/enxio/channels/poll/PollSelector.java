@@ -16,9 +16,9 @@
 
 package jnr.enxio.channels.poll;
 
-import com.kenai.jaffl.Library;
-import com.kenai.jaffl.annotations.In;
-import com.kenai.jaffl.annotations.Out;
+import jnr.ffi.Library;
+import jnr.ffi.annotations.In;
+import jnr.ffi.annotations.Out;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

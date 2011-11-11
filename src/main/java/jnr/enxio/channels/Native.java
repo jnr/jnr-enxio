@@ -18,14 +18,15 @@
 
 package jnr.enxio.channels;
 
-import com.kenai.jaffl.LastError;
-import com.kenai.jaffl.Library;
-import com.kenai.jaffl.annotations.In;
-import com.kenai.jaffl.annotations.Out;
+import jnr.ffi.LastError;
+import jnr.ffi.Library;
+import jnr.ffi.annotations.In;
+import jnr.ffi.annotations.Out;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 class Native {
+    static final jnr.ffi.Runtime runtime = jnr.ffi.Runtime.getSystemRuntime();
     private static final class LibCHolder {
         private static final LibC libc = Library.loadLibrary("c", LibC.class);
     }
@@ -74,7 +75,7 @@ class Native {
     }
 
     public static String getLastErrorString() {
-        return libc().strerror(LastError.getLastError());
+        return libc().strerror(LastError.getLastError(runtime));
     }
 
     public static interface LibC {
