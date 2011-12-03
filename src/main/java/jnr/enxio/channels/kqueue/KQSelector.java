@@ -236,16 +236,21 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         }
         selected.clear();
         System.out.printf("nchanged=%d\n", nchanged);
-        begin();
-        int n = libc.kevent(kqfd, changebuf, nchanged, eventbuf, MAX_EVENTS, ts);
-        end();
-        System.out.println("kevent returned " + n + " events ready");
+        try {
+            begin();
+            int ready = libc.kevent(kqfd, changebuf, nchanged, eventbuf, MAX_EVENTS, ts);
+	        System.out.println("kevent returned " + ready + " events ready");
+        } finally {
+            end();
+        }
         
+        int n = 0;
         synchronized (regLock) {
             for (int i = 0; i < n; ++i) {
                 int fd = io.getFD(eventbuf, i);
                 Descriptor d = descriptors.get(fd);
                 if (d != null) {
+	                n++;
                     int filt = io.getFilter(eventbuf, i);
                     System.out.printf("fd=%d filt=0x%x\n", d.fd, filt);
                     for (KQSelectionKey k : d.keys) {

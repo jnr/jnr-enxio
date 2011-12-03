@@ -194,16 +194,21 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
             cancelled.clear();
         }
         selected.clear();
-        begin();
-        int n = libc.poll(pollData, nfds, (int) timeout);
-        end();
+        try {
+            begin();
+            libc.poll(pollData, nfds, (int) timeout);
+        } finally {
+            end();
+        }
         if ((getPollRevents(0) & LibC.POLLIN) != 0) {
             wakeupReceived();
         }
+        int n = 0;
         for (SelectionKey k : keys.keySet()) {
             PollSelectionKey pk = (PollSelectionKey) k;
             int revents = getPollRevents(pk.getIndex());
             if (revents != 0) {
+	            n++;
                 int iops = k.interestOps();
                 int ops = 0;
                 if ((revents & LibC.POLLIN) != 0) {
