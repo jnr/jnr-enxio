@@ -65,6 +65,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
     private final Set<SelectionKey> selected = new LinkedHashSet<SelectionKey>();
     private final Set<Descriptor> changed = new LinkedHashSet<Descriptor>();
     private final Timespec ZERO_TIMESPEC = new Timespec(0, 0);
+    private static final boolean DEBUG = false;
     
     public KQSelector(NativeSelectorProvider provider) {
         super(provider);
@@ -215,7 +216,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
                             d.write = false;
                         }
                     }
-                    System.out.printf("Updating fd %d filt=0x%x flags=0x%x\n",
+                    if (DEBUG) System.out.printf("Updating fd %d filt=0x%x flags=0x%x\n",
                         d.fd, filt, flags);
                     if (flags != 0) {
                         io.put(changebuf, nchanged++, d.fd, filt, flags);
@@ -235,11 +236,11 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
             ts = new Timespec(sec, nsec);
         }
         selected.clear();
-        System.out.printf("nchanged=%d\n", nchanged);
+        if (DEBUG) System.out.printf("nchanged=%d\n", nchanged);
         try {
             begin();
             int ready = libc.kevent(kqfd, changebuf, nchanged, eventbuf, MAX_EVENTS, ts);
-	        System.out.println("kevent returned " + ready + " events ready");
+	        if (DEBUG) System.out.println("kevent returned " + ready + " events ready");
         } finally {
             end();
         }
@@ -252,7 +253,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
                 if (d != null) {
 	                n++;
                     int filt = io.getFilter(eventbuf, i);
-                    System.out.printf("fd=%d filt=0x%x\n", d.fd, filt);
+                    if (DEBUG) System.out.printf("fd=%d filt=0x%x\n", d.fd, filt);
                     for (KQSelectionKey k : d.keys) {
                         int iops = k.interestOps();
                         int ops = 0;
@@ -267,7 +268,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
 	                    deregister(k);
                     }
                 } else if (fd == pipefd[0]) {
-                    System.out.println("Waking up");
+                    if (DEBUG) System.out.println("Waking up");
                     wakeupReceived();
                 }
             }
