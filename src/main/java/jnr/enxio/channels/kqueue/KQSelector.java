@@ -100,6 +100,13 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
             libc.close(pipefd[1]);
         }
         pipefd[0] = pipefd[1] = kqfd = -1;
+
+        // deregister all keys
+        for (Map.Entry<Integer, Descriptor> entry : descriptors.entrySet()) {
+            for (KQSelectionKey k : entry.getValue().keys) {
+	            deregister(k);
+	        }
+	    }
     }
 
     @Override

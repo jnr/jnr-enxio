@@ -89,6 +89,11 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         if (pipefd[1] != -1) {
             libc.close(pipefd[1]);
         }
+
+        // remove all keys
+        for (SelectionKey key : keys.keySet()) {
+            remove((PollSelectionKey)key);
+        }
     }
 
     @Override
