@@ -252,6 +252,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         }
                         k.readyOps(ops);
                         selected.add(k);
+	                    deregister(k);
                     }
                 } else if (fd == pipefd[0]) {
                     System.out.println("Waking up");

@@ -214,6 +214,7 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
                 }
                 ((PollSelectionKey) k).readyOps(ops);
                 selected.add(k);
+	            remove((PollSelectionKey) k);
             }
         }
         return n;
