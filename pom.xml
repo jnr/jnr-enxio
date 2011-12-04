@@ -66,48 +66,22 @@
   </dependencies>
 
   <profiles>
+
     <profile>
-      <id>jdk7</id>
+      <id>old-jdk</id>
       <activation>
-        <jdk>[1.7,)</jdk>
+        <jdk>(,1.6]</jdk>
       </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <source>1.5</source>
-              <target>1.5</target>
-              <excludes>
-                <exclude>**/ProtocolFamily.java</exclude>
-              </excludes>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
+
+      <dependencies>
+        <dependency>
+          <groupId>com.github.jnr</groupId>
+          <artifactId>jnr-enxio-protocolfamily</artifactId>
+          <version>1.0</version>
+          <scope>provided</scope>
+          <optional>true</optional>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>2.3.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <excludes>
-            <exclude>**/java/net</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 </project>
