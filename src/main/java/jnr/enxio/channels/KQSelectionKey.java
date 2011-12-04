@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-package jnr.enxio.channels.kqueue;
+package jnr.enxio.channels;
 
 
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectionKey;
-import jnr.enxio.channels.NativeSelectableChannel;
 
 class KQSelectionKey extends AbstractSelectionKey {
     private final KQSelector selector;

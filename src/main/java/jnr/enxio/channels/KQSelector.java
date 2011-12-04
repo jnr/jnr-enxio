@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package jnr.enxio.channels.kqueue;
+package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
 import jnr.ffi.*;
@@ -38,14 +38,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import jnr.enxio.channels.NativeSelectableChannel;
-import jnr.enxio.channels.NativeSelectorProvider;
 
 /**
  * An implementation of a {@link java.nio.channels.Selector} that uses the BSD (including MacOS)
  * kqueue(2) mechanism
  */
-public class KQSelector extends java.nio.channels.spi.AbstractSelector {
+class KQSelector extends java.nio.channels.spi.AbstractSelector {
     private static final boolean DEBUG = false;
     private static final int MAX_EVENTS = 100;
     private static final int EVFILT_READ = -1;

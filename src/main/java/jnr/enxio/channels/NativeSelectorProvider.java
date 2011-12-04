@@ -26,8 +26,6 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelector;
 import java.nio.channels.spi.SelectorProvider;
-import jnr.enxio.channels.kqueue.KQSelector;
-import jnr.enxio.channels.poll.PollSelector;
 
 
 public final class NativeSelectorProvider extends SelectorProvider {

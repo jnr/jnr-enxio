@@ -14,13 +14,12 @@
  * version 3 along with this work.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package jnr.enxio.channels.poll;
+package jnr.enxio.channels;
 
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectionKey;
-import jnr.enxio.channels.NativeSelectableChannel;
 
 class PollSelectionKey extends AbstractSelectionKey {
     private final PollSelector selector;

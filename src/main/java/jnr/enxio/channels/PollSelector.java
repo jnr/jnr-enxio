@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package jnr.enxio.channels.poll;
+package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
-import jnr.enxio.channels.NativeSelectableChannel;
 import jnr.ffi.Library;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
@@ -36,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * An implementation of a {@link java.nio.channels.Selector} that uses good old
  * poll(2)
  */
-public class PollSelector extends java.nio.channels.spi.AbstractSelector {
+class PollSelector extends java.nio.channels.spi.AbstractSelector {
     private static final int POLLFD_SIZE = 8;
     private static final int FD_OFFSET = 0;
     private static final int EVENTS_OFFSET = 4;
