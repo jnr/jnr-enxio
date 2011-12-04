@@ -42,6 +42,10 @@ public final class NativeSelectorProvider extends SelectorProvider {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public DatagramChannel openDatagramChannel(java.net.ProtocolFamily family) throws IOException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     @Override
     public Pipe openPipe() throws IOException {
         throw new UnsupportedOperationException("Not supported yet.");

@@ -30,6 +30,7 @@
     <url>git@github.com:jnr/jnr-enxio.git</url>
   </scm>
 
+
   <developers>
     <developer>
       <id>wmeissner</id>
@@ -63,4 +64,50 @@
       <version>0.6.0</version>
     </dependency>
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>jdk7</id>
+      <activation>
+        <jdk>[1.7,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <source>1.5</source>
+              <target>1.5</target>
+              <excludes>
+                <exclude>**/ProtocolFamily.java</exclude>
+              </excludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.3.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <excludes>
+            <exclude>**/java/net</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
