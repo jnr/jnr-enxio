@@ -1,13 +1,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.jruby.extras</groupId>
+
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
+  <groupId>com.github.jnr</groupId>
   <artifactId>jnr-enxio</artifactId>
   <packaging>jar</packaging>
-  <version>0.1</version>
+  <version>0.2-SNAPSHOT</version>
   <name>jnr-enxio</name>
   <description>Native I/O access for java</description>
   <url>http://github.com/jnr/jnr-enxio</url>
+
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
@@ -15,35 +23,13 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
+
   <scm>
-    <connection>scm:git:http://github.com/jnr/jnr-enxio.git</connection>
-    <url>http://github.com/jnr/jnr-enxio</url>
+    <connection>scm:git:git@github.com:jnr/jnr-enxio.git</connection>
+    <developerConnection>scm:git:git@github.com:jnr/jnr-enxio.git</developerConnection>
+    <url>git@github.com:jnr/jnr-enxio.git</url>
   </scm>
-  <distributionManagement>
-     <repository>
-      <id>codehaus-jruby-repository</id>
-      <name>JRuby Central Repository</name>
-      <url>dav:https://dav.codehaus.org/repository/jruby</url>
-    </repository>
-    <snapshotRepository>
-      <id>codehaus-jruby-snapshot-repository</id>
-      <name>JRuby Central Development Repository</name>
-      <url>dav:https://dav.codehaus.org/snapshots.repository/jruby</url>
-    </snapshotRepository>
-  </distributionManagement>
-  <repositories>
-    <repository>
-      <id>codehaus</id>
-      <name>Codehaus Repository</name>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <url>http://repository.codehaus.org</url>
-    </repository>
-  </repositories>
+
   <developers>
     <developer>
       <id>wmeissner</id>
@@ -51,6 +37,12 @@
       <email>wmeissner@gmail.com</email>
     </developer>
   </developers>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.5</maven.compiler.source>
+    <maven.compiler.target>1.5</maven.compiler.target>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -71,23 +63,4 @@
       <version>0.6.0</version>
     </dependency>
   </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.0.2</version>
-        <configuration>
-          <source>1.5</source>
-          <target>1.5</target>
-        </configuration>
-      </plugin>
-    </plugins>
-    <extensions>
-      <extension>
-        <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-webdav</artifactId>
-      </extension>
-    </extensions>
-  </build>
 </project>
