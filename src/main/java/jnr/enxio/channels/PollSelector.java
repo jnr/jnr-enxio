@@ -17,9 +17,6 @@
 package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
-import jnr.ffi.Library;
-import jnr.ffi.annotations.In;
-import jnr.ffi.annotations.Out;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,6 +38,11 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
     private static final int EVENTS_OFFSET = 4;
     private static final int REVENTS_OFFSET = 6;
 
+    static final int POLLIN = 0x1;
+    static final int POLLOUT = 0x4;
+    static final int POLLERR = 0x8;
+    static final int POLLHUP = 0x10;
+
     
     private PollSelectionKey[] keyArray = new PollSelectionKey[0];
     private ByteBuffer pollData = null;
@@ -55,11 +57,11 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
 
     public PollSelector(SelectorProvider provider) {
         super(provider);
-        libc().pipe(pipefd);
+        Native.libc().pipe(pipefd);
         // Register the wakeup pipe as the first element in the pollfd array
         pollData = ByteBuffer.allocateDirect(8).order(ByteOrder.nativeOrder());
         putPollFD(0, pipefd[0]);
-        putPollEvents(0, LibC.POLLIN);
+        putPollEvents(0, POLLIN);
         nfds = 1;
         keyArray = new PollSelectionKey[1];
     }
@@ -91,10 +93,10 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
     @Override
     protected void implCloseSelector() throws IOException {
         if (pipefd[0] != -1) {
-            libc().close(pipefd[0]);
+            Native.close(pipefd[0]);
         }
         if (pipefd[1] != -1) {
-            libc().close(pipefd[1]);
+            Native.close(pipefd[1]);
         }
 
         // remove all keys
@@ -126,10 +128,10 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
     void interestOps(PollSelectionKey k, int ops) {
         short events = 0;
         if ((ops & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ)) != 0) {
-            events |= LibC.POLLIN;
+            events |= POLLIN;
         }
         if ((ops & (SelectionKey.OP_WRITE | SelectionKey.OP_CONNECT)) != 0) {
-            events |= LibC.POLLOUT;
+            events |= POLLOUT;
         }
         putPollEvents(k.getIndex(), events);
     }
@@ -219,8 +221,8 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
             begin();
 
             do {
-                nready = libc().poll(pollData, nfds, (int) timeout);
-            } while (nready < 0 && Errno.EINTR.equals(Errno.valueOf(getRuntime().getLastError())));
+                nready = Native.libc().poll(pollData, nfds, (int) timeout);
+            } while (nready < 0 && Errno.EINTR.equals(Errno.valueOf(Native.getRuntime().getLastError())));
 
         } finally {
             end();
@@ -230,7 +232,7 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
             return nready;
         }
 
-        if ((getPollRevents(0) & LibC.POLLIN) != 0) {
+        if ((getPollRevents(0) & POLLIN) != 0) {
             wakeupReceived();
         }
 
@@ -243,17 +245,17 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
                 int iops = k.interestOps();
                 int ops = 0;
 
-                if ((revents & LibC.POLLIN) != 0) {
+                if ((revents & POLLIN) != 0) {
                     ops |= iops & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ);
                 }
 
-                if ((revents & LibC.POLLOUT) != 0) {
+                if ((revents & POLLOUT) != 0) {
                     ops |= iops & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE);
                 }
 
                 // If an error occurred, enable all interested ops and let the
                 // event handling code deal with it
-                if ((revents & (LibC.POLLHUP | LibC.POLLERR)) != 0) {
+                if ((revents & (POLLHUP | POLLERR)) != 0) {
                     ops = iops;
                 }
 
@@ -267,39 +269,18 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
         return updatedKeyCount;
     }
 
-    private void wakeupReceived() {
-        libc().read(pipefd[0], ByteBuffer.allocate(1), 1);
+    private void wakeupReceived() throws IOException {
+        Native.read(pipefd[0], ByteBuffer.allocate(1));
     }
 
     @Override
     public Selector wakeup() {
-        libc().write(pipefd[1], ByteBuffer.allocate(1), 1);
+        try {
+            Native.write(pipefd[1], ByteBuffer.allocate(1));
+        } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+        }
+
         return this;
     }
-
-    public static interface LibC {
-        static final int POLLIN = 0x1;
-        static final int POLLOUT = 0x4;
-        static final int POLLERR = 0x8;
-        static final int POLLHUP = 0x10;
-        public int poll(@In @Out ByteBuffer pfds, int nfds, int timeout);
-        public int pipe(@Out int[] fds);
-        public int close(int fd);
-        public int read(int fd, @Out ByteBuffer data, int size);
-        public int write(int fd, @In ByteBuffer data, int size);
-    }
-    
-    private static final class SingletonHolder {
-        static final LibC libc = Library.loadLibrary("c", LibC.class);
-        static final jnr.ffi.Runtime runtime = Library.getRuntime(libc);
-    }
-
-    private static LibC libc() {
-        return SingletonHolder.libc;
-    }
-
-    private static jnr.ffi.Runtime getRuntime() {
-        return SingletonHolder.runtime;
-    }
-        
 }

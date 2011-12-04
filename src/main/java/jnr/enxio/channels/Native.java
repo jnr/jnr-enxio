@@ -19,14 +19,19 @@
 package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
-import jnr.ffi.*;
+import jnr.ffi.LastError;
+import jnr.ffi.Library;
+import jnr.ffi.Runtime;
+import jnr.ffi.Struct;
 import jnr.ffi.annotations.IgnoreError;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
+import jnr.ffi.annotations.Transient;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-class Native {
+final class Native {
 
     public static interface LibC {
         public static final int F_GETFL = jnr.constants.platform.Fcntl.F_GETFL.intValue();
@@ -34,9 +39,15 @@ class Native {
         public static final int O_NONBLOCK = jnr.constants.platform.OpenFlags.O_NONBLOCK.intValue();
 
         public int close(int fd);
-        public int read(int fd, @Out ByteBuffer data, int size);
-        public int write(int fd, @In ByteBuffer data, int size);
+        public int read(int fd, @Out ByteBuffer data, long size);
+        public int write(int fd, @In ByteBuffer data, long size);
         public int fcntl(int fd, int cmd, int data);
+        public int poll(@In @Out ByteBuffer pfds, int nfds, int timeout);
+        public int kqueue();
+        public int kevent(int kq, @In ByteBuffer changebuf, int nchanges,
+                @Out ByteBuffer eventbuf, int nevents,
+                @In @Transient Timespec timeout);
+        public int pipe(@Out int[] fds);
 
         @IgnoreError String strerror(int error);
     }
@@ -46,11 +57,11 @@ class Native {
         static final jnr.ffi.Runtime runtime = Library.getRuntime(libc);
     }
 
-    private static LibC libc() {
+    static LibC libc() {
         return SingletonHolder.libc;
     }
 
-    private static jnr.ffi.Runtime getRuntime() {
+    static jnr.ffi.Runtime getRuntime() {
         return SingletonHolder.runtime;
     }
 
@@ -119,5 +130,24 @@ class Native {
     static Errno getLastError() {
         return Errno.valueOf(LastError.getLastError(getRuntime()));
     }
+
+    public static final class Timespec extends Struct {
+            public final SignedLong tv_sec = new SignedLong();
+            public final SignedLong tv_nsec = new SignedLong();
+
+            public Timespec() {
+                 super(Native.getRuntime());
+            }
+
+            public Timespec(Runtime runtime) {
+                super(runtime);
+            }
+
+            public Timespec(long sec, long nsec) {
+                super(Native.getRuntime());
+                tv_sec.set(sec);
+                tv_nsec.set(nsec);
+            }
+        }
 
 }
