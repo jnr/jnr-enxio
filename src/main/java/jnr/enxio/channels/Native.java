@@ -18,65 +18,15 @@
 
 package jnr.enxio.channels;
 
-import jnr.ffi.LastError;
-import jnr.ffi.Library;
+import jnr.constants.platform.Errno;
+import jnr.ffi.*;
+import jnr.ffi.annotations.IgnoreError;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 class Native {
-    static final jnr.ffi.Runtime runtime = jnr.ffi.Runtime.getSystemRuntime();
-    private static final class LibCHolder {
-        private static final LibC libc = Library.loadLibrary("c", LibC.class);
-    }
-
-    private static LibC libc() {
-        return LibCHolder.libc;
-    }
-
-    public static int close(int fd) {
-        return libc().close(fd);
-    }
-    public static int read(int fd, ByteBuffer dst) throws IOException {
-        if (dst == null) {
-            throw new NullPointerException("Destination buffer cannot be null");
-        }
-        if (dst.isReadOnly()) {
-            throw new IllegalArgumentException("Read-only buffer");
-        }
-
-        int n = libc().read(fd, dst, dst.remaining());
-        if (n > 0) {
-            dst.position(dst.position() + n);
-        }
-        return n;
-    }
-
-    public static int write(int fd, ByteBuffer src) throws IOException {
-        if (src == null) {
-            throw new NullPointerException("Source buffer cannot be null");
-        }
-        int n = libc().write(fd, src, src.remaining());
-        if (n > 0) {
-            src.position(src.position() + n);
-        }
-        return n;
-    }
-
-    public static void setBlocking(int fd, boolean block) {
-        int flags = libc().fcntl(fd, LibC.F_GETFL, 0);
-        if (block) {
-            flags &= ~LibC.O_NONBLOCK;
-        } else {
-            flags |= LibC.O_NONBLOCK;
-        }
-        libc().fcntl(fd, LibC.F_SETFL, flags);
-    }
-
-    public static String getLastErrorString() {
-        return libc().strerror(LastError.getLastError(runtime));
-    }
 
     public static interface LibC {
         public static final int F_GETFL = jnr.constants.platform.Fcntl.F_GETFL.intValue();
@@ -87,6 +37,87 @@ class Native {
         public int read(int fd, @Out ByteBuffer data, int size);
         public int write(int fd, @In ByteBuffer data, int size);
         public int fcntl(int fd, int cmd, int data);
-        String strerror(int error);
+
+        @IgnoreError String strerror(int error);
     }
+
+    private static final class SingletonHolder {
+        static final LibC libc = Library.loadLibrary("c", LibC.class);
+        static final jnr.ffi.Runtime runtime = Library.getRuntime(libc);
+    }
+
+    private static LibC libc() {
+        return SingletonHolder.libc;
+    }
+
+    private static jnr.ffi.Runtime getRuntime() {
+        return SingletonHolder.runtime;
+    }
+
+    public static int close(int fd) {
+        int rc;
+        do {
+            rc = libc().close(fd);
+        } while (rc < 0 && Errno.EINTR.equals(getLastError()));
+
+        return rc;
+    }
+
+    public static int read(int fd, ByteBuffer dst) throws IOException {
+        if (dst == null) {
+            throw new NullPointerException("Destination buffer cannot be null");
+        }
+        if (dst.isReadOnly()) {
+            throw new IllegalArgumentException("Read-only buffer");
+        }
+
+        int n;
+        do {
+            n = libc().read(fd, dst, dst.remaining());
+        } while (n < 0 && Errno.EINTR.equals(getLastError()));
+
+        if (n > 0) {
+            dst.position(dst.position() + n);
+        }
+
+        return n;
+    }
+
+    public static int write(int fd, ByteBuffer src) throws IOException {
+        if (src == null) {
+            throw new NullPointerException("Source buffer cannot be null");
+        }
+
+        int n;
+        do {
+            n = libc().write(fd, src, src.remaining());
+        } while (n < 0 && Errno.EINTR.equals(getLastError()));
+
+        if (n > 0) {
+            src.position(src.position() + n);
+        }
+
+        return n;
+    }
+
+    public static void setBlocking(int fd, boolean block) {
+        int flags = libc().fcntl(fd, LibC.F_GETFL, 0);
+        if (block) {
+            flags &= ~LibC.O_NONBLOCK;
+
+        } else {
+            flags |= LibC.O_NONBLOCK;
+        }
+
+        libc().fcntl(fd, LibC.F_SETFL, flags);
+    }
+
+    public static String getLastErrorString() {
+        return libc().strerror(LastError.getLastError(getRuntime()));
+    }
+
+    static Errno getLastError() {
+        return Errno.valueOf(LastError.getLastError(getRuntime()));
+    }
+
 }

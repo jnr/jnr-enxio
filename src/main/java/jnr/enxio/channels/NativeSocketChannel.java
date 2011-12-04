@@ -64,13 +64,15 @@ public class NativeSocketChannel extends AbstractSelectableChannel
     public final int getFD() {
         return fd;
     }
+
     public int read(ByteBuffer dst) throws IOException {
         int n = Native.read(fd, dst);
         switch (n) {
             case 0:
                 return -1;
+
             case -1:
-                switch (Errno.valueOf(LastError.getLastError(Native.runtime))) {
+                switch (Native.getLastError()) {
                     case EAGAIN:
                     case EWOULDBLOCK:
                         return 0;
@@ -78,12 +80,18 @@ public class NativeSocketChannel extends AbstractSelectableChannel
                     default:
                         throw new IOException(Native.getLastErrorString());
                 }
+
             default:
                 return n;
         }
     }
 
     public int write(ByteBuffer src) throws IOException {
-        return Native.write(fd, src);
+        int n = Native.write(fd, src);
+        if (n < 0) {
+            throw new IOException(Native.getLastErrorString());
+        }
+
+        return n;
     }
 }

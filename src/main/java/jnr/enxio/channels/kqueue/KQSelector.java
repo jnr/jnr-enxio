@@ -18,12 +18,13 @@
 
 package jnr.enxio.channels.kqueue;
 
-import jnr.ffi.Library;
-import jnr.ffi.Platform;
+import jnr.constants.platform.Errno;
+import jnr.ffi.*;
+import jnr.ffi.Runtime;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
 import jnr.ffi.annotations.Transient;
-import jnr.ffi.Struct;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -45,8 +46,7 @@ import jnr.enxio.channels.NativeSelectorProvider;
  * kqueue(2) mechanism
  */
 public class KQSelector extends java.nio.channels.spi.AbstractSelector {
-    private static final LibC libc = Library.loadLibrary("c", LibC.class);
-    private static final EventIO io = EventIO.getInstance();
+    private static final boolean DEBUG = false;
     private static final int MAX_EVENTS = 100;
     private static final int EVFILT_READ = -1;
     private static final int EVFILT_WRITE = -2;
@@ -55,50 +55,54 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
     private static final int EV_ENABLE = 0x0004;
     private static final int EV_DISABLE = 0x0008;
     private static final int EV_CLEAR = 0x0020;
+
+
+    private int kqfd = -1;
     private final ByteBuffer changebuf;
     private final ByteBuffer eventbuf;
-    private int kqfd = -1;
+    private final EventIO io = EventIO.getInstance();
     private final int[] pipefd = { -1, -1 };
     private final Object regLock = new Object();
-    private final Map<Integer, Descriptor> descriptors
-            = new ConcurrentHashMap<Integer, Descriptor>();
+    private final Map<Integer, Descriptor> descriptors = new ConcurrentHashMap<Integer, Descriptor>();
     private final Set<SelectionKey> selected = new LinkedHashSet<SelectionKey>();
     private final Set<Descriptor> changed = new LinkedHashSet<Descriptor>();
     private final Timespec ZERO_TIMESPEC = new Timespec(0, 0);
-    private static final boolean DEBUG = false;
     
+
     public KQSelector(NativeSelectorProvider provider) {
         super(provider);
         changebuf = ByteBuffer.allocateDirect(io.size() * MAX_EVENTS).order(ByteOrder.nativeOrder());
         eventbuf = ByteBuffer.allocateDirect(io.size() * MAX_EVENTS).order(ByteOrder.nativeOrder());
         
-        libc.pipe(pipefd);
+        libc().pipe(pipefd);
 
-        kqfd = libc.kqueue();
+        kqfd = libc().kqueue();
         io.putFD(changebuf, 0, pipefd[0]);
         io.putFilter(changebuf, 0, EVFILT_READ);
         io.putFlags(changebuf, 0, EV_ADD);
-        libc.kevent(kqfd, changebuf, 1, null, 0, ZERO_TIMESPEC);
+        libc().kevent(kqfd, changebuf, 1, null, 0, ZERO_TIMESPEC);
     }
 
     private static class Descriptor {
         private final int fd;
         private final Set<KQSelectionKey> keys = new HashSet<KQSelectionKey>();
         private boolean write = false, read = false;
+
         public Descriptor(int fd) {
             this.fd = fd;
         }
     }
+
     @Override
     protected void implCloseSelector() throws IOException {
         if (kqfd != -1) {
-            libc.close(kqfd);
+            libc().close(kqfd);
         }
         if (pipefd[0] != -1) {
-            libc.close(pipefd[0]);
+            libc().close(pipefd[0]);
         }
         if (pipefd[1] != -1) {
-            libc.close(pipefd[1]);
+            libc().close(pipefd[1]);
         }
         pipefd[0] = pipefd[1] = kqfd = -1;
 
@@ -154,6 +158,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
     public int select() throws IOException {
         return poll(-1);
     }
+
     private int poll(long timeout) {
         int nchanged = 0;
         //
@@ -174,7 +179,7 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         changed.remove(d);
                     }
                     if (nchanged >= MAX_EVENTS) {
-                        libc.kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
+                        libc().kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
                         nchanged = 0;
                     }
                 }
@@ -222,67 +227,80 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         io.put(changebuf, nchanged++, d.fd, filt, flags);
                     }
                     if (nchanged >= MAX_EVENTS) {
-                        libc.kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
+                        libc().kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
                         nchanged = 0;
                     }
                 }
             }
             changed.clear();
         }
+
         Timespec ts = null;
         if (timeout >= 0) {
             long sec = TimeUnit.MILLISECONDS.toSeconds(timeout);
             long nsec = TimeUnit.MILLISECONDS.toNanos(timeout % 1000);
             ts = new Timespec(sec, nsec);
         }
+
         selected.clear();
+
         if (DEBUG) System.out.printf("nchanged=%d\n", nchanged);
+        int nready = 0;
         try {
             begin();
-            int ready = libc.kevent(kqfd, changebuf, nchanged, eventbuf, MAX_EVENTS, ts);
-	        if (DEBUG) System.out.println("kevent returned " + ready + " events ready");
+            do {
+
+                nready = libc().kevent(kqfd, changebuf, nchanged, eventbuf, MAX_EVENTS, ts);
+
+            } while (nready < 0 && Errno.EINTR.equals(Errno.valueOf(getRuntime().getLastError())));
+
+            if (DEBUG) System.out.println("kevent returned " + nready + " events ready");
+
         } finally {
             end();
         }
-        
-        int n = 0;
+
+        int updatedKeyCount = 0;
         synchronized (regLock) {
-            for (int i = 0; i < n; ++i) {
+            for (int i = 0; i < nready; ++i) {
                 int fd = io.getFD(eventbuf, i);
                 Descriptor d = descriptors.get(fd);
+
                 if (d != null) {
-	                n++;
                     int filt = io.getFilter(eventbuf, i);
                     if (DEBUG) System.out.printf("fd=%d filt=0x%x\n", d.fd, filt);
                     for (KQSelectionKey k : d.keys) {
                         int iops = k.interestOps();
                         int ops = 0;
+
                         if (filt == EVFILT_READ) {
                             ops |= iops & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ);
                         }
                         if (filt == EVFILT_WRITE) {
                             ops |= iops & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE);
                         }
+                        ++updatedKeyCount;
                         k.readyOps(ops);
                         selected.add(k);
 	                    deregister(k);
                     }
+
                 } else if (fd == pipefd[0]) {
                     if (DEBUG) System.out.println("Waking up");
                     wakeupReceived();
                 }
             }
         }
-        return n;
+        return updatedKeyCount;
     }
     
     private void wakeupReceived() {
-        libc.read(pipefd[0], ByteBuffer.allocate(1), 1);
+        libc().read(pipefd[0], ByteBuffer.allocate(1), 1);
     }
     
     @Override
     public Selector wakeup() {
-        libc.write(pipefd[1], ByteBuffer.allocate(1), 1);
+        libc().write(pipefd[1], ByteBuffer.allocate(1), 1);
         return this;
     }
 
@@ -291,11 +309,12 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
             changed.add(descriptors.get(k.getFD()));
         }
     }
+
     private static abstract class EventIO {
         private final int eventSize, identOffset, filterOffset, flagsOffset;
 
         public static EventIO getInstance() {
-            return Platform.getPlatform().addressSize() == 64 ? EventIO64.INSTANCE : EventIO32.INSTANCE;
+            return getRuntime().addressSize() == 8 ? EventIO64.INSTANCE : EventIO32.INSTANCE;
         }
 
         public EventIO(int eventSize, int identOffset, int filterOffset, int flagsOffset) {
@@ -389,19 +408,21 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
             return (int) buf.getLong(EVENT_SIZE * index + IDENT_OFFSET);
         }
     }
-    
-    private static final jnr.ffi.Runtime runtime = jnr.ffi.Runtime.getSystemRuntime();
 
-    static class Timespec extends Struct {
+    public static final class Timespec extends Struct {
         public final SignedLong tv_sec = new SignedLong();
         public final SignedLong tv_nsec = new SignedLong();
 
         public Timespec() {
-             super(runtime);
+             super(KQSelector.getRuntime());
+        }
+
+        public Timespec(Runtime runtime) {
+            super(runtime);
         }
 
         public Timespec(long sec, long nsec) {
-            super(runtime);
+            super(KQSelector.getRuntime());
             tv_sec.set(sec);
             tv_nsec.set(nsec);
         }
@@ -418,4 +439,18 @@ public class KQSelector extends java.nio.channels.spi.AbstractSelector {
         public int read(int fd, @Out ByteBuffer data, int size);
         public int write(int fd, @In ByteBuffer data, int size);
     }
+
+    private static final class SingletonHolder {
+        static final LibC libc = Library.loadLibrary("c", LibC.class);
+        static final jnr.ffi.Runtime runtime = Library.getRuntime(libc);
+    }
+
+    private static LibC libc() {
+        return SingletonHolder.libc;
+    }
+
+    private static jnr.ffi.Runtime getRuntime() {
+        return SingletonHolder.runtime;
+    }
+
 }

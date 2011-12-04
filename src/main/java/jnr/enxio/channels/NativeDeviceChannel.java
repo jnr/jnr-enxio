@@ -18,6 +18,7 @@
 
 package jnr.enxio.channels;
 
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
@@ -41,7 +42,10 @@ public class NativeDeviceChannel extends AbstractSelectableChannel implements By
     
     @Override
     protected void implCloseSelectableChannel() throws IOException {
-       Native.close(fd);
+        int n = Native.close(fd);
+        if (n < 0) {
+            throw new IOException(Native.getLastErrorString());
+        }
     }
 
     @Override
@@ -56,11 +60,34 @@ public class NativeDeviceChannel extends AbstractSelectableChannel implements By
     public final int getFD() {
         return fd;
     }
+    
     public int read(ByteBuffer dst) throws IOException {
-        return Native.read(fd, dst);
+        int n = Native.read(fd, dst);
+        switch (n) {
+            case 0:
+                return -1;
+
+            case -1:
+                switch (Native.getLastError()) {
+                    case EAGAIN:
+                    case EWOULDBLOCK:
+                        return 0;
+
+                    default:
+                        throw new IOException(Native.getLastErrorString());
+                }
+
+            default:
+                return n;
+        }
     }
 
     public int write(ByteBuffer src) throws IOException {
-        return Native.write(fd, src);
+        int n = Native.write(fd, src);
+        if (n < 0) {
+            throw new IOException(Native.getLastErrorString());
+        }
+
+        return n;
     }
 }

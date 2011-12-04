@@ -34,9 +34,11 @@ public final class NativeSelectorProvider extends SelectorProvider {
     private static final class SingletonHolder {
         static NativeSelectorProvider INSTANCE = new NativeSelectorProvider();
     }
+
     public static final SelectorProvider getInstance() {
         return SingletonHolder.INSTANCE;
     }
+
     @Override
     public DatagramChannel openDatagramChannel() throws IOException {
         throw new UnsupportedOperationException("Not supported yet.");
@@ -49,7 +51,7 @@ public final class NativeSelectorProvider extends SelectorProvider {
 
     @Override
     public AbstractSelector openSelector() throws IOException {
-        return Platform.getPlatform().isBSD() ? new KQSelector(this) : new PollSelector(this);
+        return Platform.getNativePlatform().isBSD() ? new KQSelector(this) : new PollSelector(this);
     }
 
     @Override

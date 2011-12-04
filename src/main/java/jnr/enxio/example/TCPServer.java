@@ -40,7 +40,7 @@ import java.nio.channels.SelectableChannel;
  * @author wayne
  */
 public class TCPServer {
-    static final String[] libnames = Platform.getPlatform().getOS() == Platform.OS.SOLARIS
+    static final String[] libnames = Platform.getNativePlatform().getOS() == Platform.OS.SOLARIS
                         ? new String[] { "socket", "nsl", "c" }
                         : new String[] { "c" };
     static final LibC libc = Library.loadLibrary(LibC.class, libnames);
@@ -90,7 +90,7 @@ public class TCPServer {
         int fd = libc.socket(LibC.AF_INET, LibC.SOCK_STREAM, 0);
         System.out.println("fd=" + fd);
         SockAddr addr;
-        if (Platform.getPlatform().isBSD()) {
+        if (Platform.getNativePlatform().isBSD()) {
             BSDSockAddrIN sin = new BSDSockAddrIN();
             sin.sin_family.set((byte) LibC.AF_INET);
             sin.sin_port.set(htons((short) port));
@@ -113,6 +113,7 @@ public class TCPServer {
         System.out.println("bind+listen succeeded");
         return new NativeServerSocketChannel(fd);
     }
+
     private static abstract class IO {
         protected final SelectableChannel channel;
         protected final Selector selector;
@@ -123,6 +124,7 @@ public class TCPServer {
         public abstract void read();
         public abstract void write();
     }
+    
     private static class Accepter extends IO {
         public Accepter(Selector selector, NativeServerSocketChannel ch) {
             super(selector, ch);

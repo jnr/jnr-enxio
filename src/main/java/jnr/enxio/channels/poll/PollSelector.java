@@ -16,9 +16,12 @@
 
 package jnr.enxio.channels.poll;
 
+import jnr.constants.platform.Errno;
+import jnr.enxio.channels.NativeSelectableChannel;
 import jnr.ffi.Library;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -26,24 +29,19 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectableChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import jnr.enxio.channels.NativeSelectableChannel;
 
 /**
  * An implementation of a {@link java.nio.channels.Selector} that uses good old
  * poll(2)
  */
 public class PollSelector extends java.nio.channels.spi.AbstractSelector {
-    private static final LibC libc = Library.loadLibrary("c", LibC.class);
     private static final int POLLFD_SIZE = 8;
     private static final int FD_OFFSET = 0;
     private static final int EVENTS_OFFSET = 4;
     private static final int REVENTS_OFFSET = 6;
+
     
     private PollSelectionKey[] keyArray = new PollSelectionKey[0];
     private ByteBuffer pollData = null;
@@ -52,12 +50,13 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
     private final int[] pipefd = { -1, -1 };
     private final Object regLock = new Object();
     
-    private final Map<SelectionKey, Boolean> keys
-            = new ConcurrentHashMap<SelectionKey, Boolean>();
+    private final Map<SelectionKey, Boolean> keys = new ConcurrentHashMap<SelectionKey, Boolean>();
     private final Set<SelectionKey> selected = new HashSet<SelectionKey>();
+
+
     public PollSelector(SelectorProvider provider) {
         super(provider);
-        libc.pipe(pipefd);
+        libc().pipe(pipefd);
         // Register the wakeup pipe as the first element in the pollfd array
         pollData = ByteBuffer.allocateDirect(8).order(ByteOrder.nativeOrder());
         putPollFD(0, pipefd[0]);
@@ -65,29 +64,38 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         nfds = 1;
         keyArray = new PollSelectionKey[1];
     }
+    
     private void putPollFD(int idx, int fd) {
         pollData.putInt((idx * POLLFD_SIZE) + FD_OFFSET, fd);
     }
+
     private void putPollEvents(int idx, int events) {
         pollData.putShort((idx * POLLFD_SIZE) + EVENTS_OFFSET, (short) events);
     }
+
     private int getPollFD(int idx) {
         return pollData.getInt((idx * POLLFD_SIZE) + FD_OFFSET);
     }
+
     private short getPollEvents(int idx) {
         return pollData.getShort((idx * POLLFD_SIZE) + EVENTS_OFFSET);
     }
+
     private short getPollRevents(int idx) {
         return pollData.getShort((idx * POLLFD_SIZE) + REVENTS_OFFSET);
+    }
+
+    private void putPollRevents(int idx, int events) {
+        pollData.putShort((idx * POLLFD_SIZE) + REVENTS_OFFSET, (short) events);
     }
 
     @Override
     protected void implCloseSelector() throws IOException {
         if (pipefd[0] != -1) {
-            libc.close(pipefd[0]);
+            libc().close(pipefd[0]);
         }
         if (pipefd[1] != -1) {
-            libc.close(pipefd[1]);
+            libc().close(pipefd[1]);
         }
 
         // remove all keys
@@ -107,13 +115,15 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
 
     @Override
     public Set<SelectionKey> keys() {
-        return new HashSet(Arrays.asList(keyArray).subList(0, nfds));
+        return new HashSet<SelectionKey>(Arrays.asList(keyArray).subList(0, nfds));
     }
 
     @Override
     public Set<SelectionKey> selectedKeys() {
         return Collections.unmodifiableSet(selected);
     }
+
+
     void interestOps(PollSelectionKey k, int ops) {
         short events = 0;
         if ((ops & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ)) != 0) {
@@ -124,6 +134,8 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         }
         putPollEvents(k.getIndex(), events);
     }
+
+
     private void add(PollSelectionKey k) {
         synchronized (regLock) {
             ++nfds;
@@ -145,6 +157,8 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
             keys.put(k, true);
         }
     }
+
+
     private void remove(PollSelectionKey k) {
         int idx = k.getIndex();
         synchronized (regLock) {
@@ -168,20 +182,26 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         }
         deregister(k);
     }
+
+
     @Override
     public int selectNow() throws IOException {
         return poll(0);
     }
+
 
     @Override
     public int select(long timeout) throws IOException {
         return poll(timeout > 0 ? timeout : -1);
     }
 
+
     @Override
     public int select() throws IOException {
         return poll(-1);
     }
+
+
     private int poll(long timeout) throws IOException {
         //
         // Remove any cancelled keys
@@ -193,50 +213,68 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
             }
             cancelled.clear();
         }
+
         selected.clear();
+        int nready = 0;
         try {
             begin();
-            libc.poll(pollData, nfds, (int) timeout);
+
+            do {
+                nready = libc().poll(pollData, nfds, (int) timeout);
+            } while (nready < 0 && Errno.EINTR.equals(Errno.valueOf(getRuntime().getLastError())));
+
         } finally {
             end();
         }
+
+        if (nready < 1) {
+            return nready;
+        }
+
         if ((getPollRevents(0) & LibC.POLLIN) != 0) {
             wakeupReceived();
         }
-        int n = 0;
+
+        int updatedKeyCount = 0;
         for (SelectionKey k : keys.keySet()) {
             PollSelectionKey pk = (PollSelectionKey) k;
             int revents = getPollRevents(pk.getIndex());
             if (revents != 0) {
-	            n++;
+                putPollRevents(pk.getIndex(), 0);
                 int iops = k.interestOps();
                 int ops = 0;
+
                 if ((revents & LibC.POLLIN) != 0) {
                     ops |= iops & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ);
                 }
+
                 if ((revents & LibC.POLLOUT) != 0) {
                     ops |= iops & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE);
                 }
+
                 // If an error occurred, enable all interested ops and let the
                 // event handling code deal with it
                 if ((revents & (LibC.POLLHUP | LibC.POLLERR)) != 0) {
                     ops = iops;
                 }
+
                 ((PollSelectionKey) k).readyOps(ops);
+                ++updatedKeyCount;
                 selected.add(k);
 	            remove((PollSelectionKey) k);
             }
         }
-        return n;
+
+        return updatedKeyCount;
     }
 
     private void wakeupReceived() {
-        libc.read(pipefd[0], ByteBuffer.allocate(1), 1);
+        libc().read(pipefd[0], ByteBuffer.allocate(1), 1);
     }
 
     @Override
     public Selector wakeup() {
-        libc.write(pipefd[1], ByteBuffer.allocate(1), 1);
+        libc().write(pipefd[1], ByteBuffer.allocate(1), 1);
         return this;
     }
 
@@ -245,10 +283,24 @@ public class PollSelector extends java.nio.channels.spi.AbstractSelector {
         static final int POLLOUT = 0x4;
         static final int POLLERR = 0x8;
         static final int POLLHUP = 0x10;
-        public int poll(ByteBuffer pfds, int nfds, int timeout);
+        public int poll(@In @Out ByteBuffer pfds, int nfds, int timeout);
         public int pipe(@Out int[] fds);
         public int close(int fd);
         public int read(int fd, @Out ByteBuffer data, int size);
         public int write(int fd, @In ByteBuffer data, int size);
     }
+    
+    private static final class SingletonHolder {
+        static final LibC libc = Library.loadLibrary("c", LibC.class);
+        static final jnr.ffi.Runtime runtime = Library.getRuntime(libc);
+    }
+
+    private static LibC libc() {
+        return SingletonHolder.libc;
+    }
+
+    private static jnr.ffi.Runtime getRuntime() {
+        return SingletonHolder.runtime;
+    }
+        
 }
