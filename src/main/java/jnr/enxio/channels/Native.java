@@ -48,6 +48,7 @@ final class Native {
                 @Out ByteBuffer eventbuf, int nevents,
                 @In @Transient Timespec timeout);
         public int pipe(@Out int[] fds);
+        public int shutdown(int s, int how);
 
         @IgnoreError String strerror(int error);
     }
@@ -121,6 +122,10 @@ final class Native {
         }
 
         libc().fcntl(fd, LibC.F_SETFL, flags);
+    }
+    
+    public static int shutdown(int fd, int how) {
+        return libc().shutdown(fd, how);
     }
 
     public static String getLastErrorString() {

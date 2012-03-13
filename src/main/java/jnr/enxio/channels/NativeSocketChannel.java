@@ -19,6 +19,7 @@
 package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
+import jnr.constants.platform.Shutdown;
 import jnr.ffi.LastError;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -94,4 +95,21 @@ public class NativeSocketChannel extends AbstractSelectableChannel
 
         return n;
     }
+    
+    public void shutdownInput() throws IOException {
+        int n = Native.shutdown(fd, SHUT_RD);
+        if (n < 0) {
+            throw new IOException(Native.getLastErrorString());
+        }
+    }
+    
+    public void shutdownOutput() throws IOException {
+        int n = Native.shutdown(fd, SHUT_WR);
+        if (n < 0) {
+            throw new IOException(Native.getLastErrorString());
+        }
+    }
+    
+    private final static int SHUT_RD = Shutdown.SHUT_RD.intValue();
+    private final static int SHUT_WR = Shutdown.SHUT_WR.intValue();
 }
