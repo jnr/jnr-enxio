@@ -39,8 +39,8 @@ final class Native {
         public static final int O_NONBLOCK = jnr.constants.platform.OpenFlags.O_NONBLOCK.intValue();
 
         public int close(int fd);
-        public int read(int fd, @Out ByteBuffer data, long size);
-        public int write(int fd, @In ByteBuffer data, long size);
+        public long read(int fd, @Out ByteBuffer data, long size);
+        public long write(int fd, @In ByteBuffer data, long size);
         public int fcntl(int fd, int cmd, int data);
         public int poll(@In @Out ByteBuffer pfds, int nfds, int timeout);
         public int kqueue();
@@ -83,16 +83,16 @@ final class Native {
             throw new IllegalArgumentException("Read-only buffer");
         }
 
-        int n;
+        long n;
         do {
             n = libc().read(fd, dst, dst.remaining());
         } while (n < 0 && Errno.EINTR.equals(getLastError()));
 
         if (n > 0) {
-            dst.position(dst.position() + n);
+            dst.position(dst.position() + (int) n);
         }
 
-        return n;
+        return (int) n;
     }
 
     public static int write(int fd, ByteBuffer src) throws IOException {
@@ -100,16 +100,16 @@ final class Native {
             throw new NullPointerException("Source buffer cannot be null");
         }
 
-        int n;
+        long n;
         do {
             n = libc().write(fd, src, src.remaining());
         } while (n < 0 && Errno.EINTR.equals(getLastError()));
 
         if (n > 0) {
-            src.position(src.position() + n);
+            src.position(src.position() + (int) n);
         }
 
-        return n;
+        return (int) n;
     }
 
     public static void setBlocking(int fd, boolean block) {
