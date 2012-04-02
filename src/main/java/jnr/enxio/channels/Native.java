@@ -27,6 +27,8 @@ import jnr.ffi.annotations.IgnoreError;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
 import jnr.ffi.annotations.Transient;
+import jnr.ffi.types.size_t;
+import jnr.ffi.types.ssize_t;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -39,8 +41,8 @@ final class Native {
         public static final int O_NONBLOCK = jnr.constants.platform.OpenFlags.O_NONBLOCK.intValue();
 
         public int close(int fd);
-        public long read(int fd, @Out ByteBuffer data, long size);
-        public long write(int fd, @In ByteBuffer data, long size);
+        public @ssize_t long read(int fd, @Out ByteBuffer data, @size_t long size);
+        public @ssize_t long write(int fd, @In ByteBuffer data, @size_t long size);
         public int fcntl(int fd, int cmd, int data);
         public int poll(@In @Out ByteBuffer pfds, int nfds, int timeout);
         public int kqueue();

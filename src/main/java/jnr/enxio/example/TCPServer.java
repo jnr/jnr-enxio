@@ -18,22 +18,22 @@
 
 package jnr.enxio.example;
 
-import jnr.ffi.LastError;
-import jnr.ffi.Library;
-import jnr.ffi.Platform;
-import jnr.ffi.annotations.In;
-import jnr.ffi.annotations.Out;
-//import jnr.ffi.byref.IntByReference;
-import jnr.ffi.Struct;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import jnr.enxio.channels.NativeSelectableChannel;
 import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.enxio.channels.NativeServerSocketChannel;
 import jnr.enxio.channels.NativeSocketChannel;
+import jnr.ffi.*;
+import jnr.ffi.annotations.In;
+import jnr.ffi.annotations.Out;
+import jnr.ffi.types.size_t;
+import jnr.ffi.types.ssize_t;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+
 
 /**
  *
@@ -58,7 +58,7 @@ public class TCPServer {
         public final Unsigned8 sin_family = new Unsigned8();
         public final Unsigned16 sin_port = new Unsigned16();
         public final Unsigned32 sin_addr = new Unsigned32();
-        public final Signed8[] sin_zero = array(new Signed8[8]);
+        public final Padding sin_zero = new Padding(NativeType.SCHAR, 8);
     }
 
     static class SockAddrIN extends SockAddr {
@@ -66,7 +66,7 @@ public class TCPServer {
         public final Unsigned16 sin_family = new Unsigned16();
         public final Unsigned16 sin_port = new Unsigned16();
         public final Unsigned32 sin_addr = new Unsigned32();
-        public final Signed8[] sin_zero = array(new Signed8[8]);
+        public final Padding sin_zero = new Padding(NativeType.SCHAR, 8);
     }
 
     public static interface LibC {
@@ -78,9 +78,9 @@ public class TCPServer {
         int listen(int fd, int backlog);
         int bind(int fd, SockAddr addr, int len);
         int accept(int fd, @Out SockAddr addr, int[] len);
-        int read(int fd, @Out ByteBuffer data, int len);
-        int read(int fd, @Out byte[] data, int len);
-        int write(int fd, @In ByteBuffer data, int len);
+        @ssize_t int read(int fd, @Out ByteBuffer data, @size_t int len);
+        @ssize_t int read(int fd, @Out byte[] data, @size_t int len);
+        @ssize_t int write(int fd, @In ByteBuffer data, @size_t int len);
         String strerror(int error);
     }
     static short htons(short val) {
