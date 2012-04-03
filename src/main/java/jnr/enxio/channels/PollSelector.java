@@ -121,7 +121,7 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
 
     @Override
     public Set<SelectionKey> selectedKeys() {
-        return Collections.unmodifiableSet(selected);
+        return selected;
     }
 
 
@@ -215,7 +215,6 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
             cancelled.clear();
         }
 
-        selected.clear();
         int nready = 0;
         try {
             begin();
@@ -261,8 +260,9 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
 
                 ((PollSelectionKey) k).readyOps(ops);
                 ++updatedKeyCount;
-                selected.add(k);
-	            remove((PollSelectionKey) k);
+                if (!selected.contains(k)) {
+                    selected.add(k);
+                }
             }
         }
 

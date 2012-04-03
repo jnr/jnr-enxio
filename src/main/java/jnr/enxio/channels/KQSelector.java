@@ -19,10 +19,13 @@
 package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
+import jnr.ffi.Memory;
+import jnr.ffi.Pointer;
+import jnr.ffi.StructLayout;
+import jnr.ffi.TypeAlias;
+import jnr.ffi.provider.jffi.NativeRuntime;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.AbstractSelectableChannel;
@@ -47,8 +50,9 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
 
 
     private int kqfd = -1;
-    private final ByteBuffer changebuf;
-    private final ByteBuffer eventbuf;
+    private final jnr.ffi.Runtime runtime = NativeRuntime.getSystemRuntime();
+    private final Pointer changebuf;
+    private final Pointer eventbuf;
     private final EventIO io = EventIO.getInstance();
     private final int[] pipefd = { -1, -1 };
     private final Object regLock = new Object();
@@ -60,15 +64,13 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
 
     public KQSelector(NativeSelectorProvider provider) {
         super(provider);
-        changebuf = ByteBuffer.allocateDirect(io.size() * MAX_EVENTS).order(ByteOrder.nativeOrder());
-        eventbuf = ByteBuffer.allocateDirect(io.size() * MAX_EVENTS).order(ByteOrder.nativeOrder());
-        
+        changebuf = Memory.allocateDirect(runtime, MAX_EVENTS * io.size());
+        eventbuf = Memory.allocateDirect(runtime, MAX_EVENTS * io.size());
+
         Native.libc().pipe(pipefd);
 
         kqfd = Native.libc().kqueue();
-        io.putFD(changebuf, 0, pipefd[0]);
-        io.putFilter(changebuf, 0, EVFILT_READ);
-        io.putFlags(changebuf, 0, EV_ADD);
+        io.put(changebuf, 0, pipefd[0], EVFILT_READ, EV_ADD);
         Native.libc().kevent(kqfd, changebuf, 1, null, 0, ZERO_TIMESPEC);
     }
 
@@ -130,7 +132,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
 
     @Override
     public Set<SelectionKey> selectedKeys() {
-        return Collections.unmodifiableSet(selected);
+        return selected;
     }
 
     @Override
@@ -231,8 +233,6 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
             ts = new Native.Timespec(sec, nsec);
         }
 
-        selected.clear();
-
         if (DEBUG) System.out.printf("nchanged=%d\n", nchanged);
         int nready = 0;
         try {
@@ -270,8 +270,9 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         }
                         ++updatedKeyCount;
                         k.readyOps(ops);
-                        selected.add(k);
-	                    deregister(k);
+                        if (!selected.contains(k)) {
+                            selected.add(k);
+                        }
                     }
 
                 } else if (fd == pipefd[0]) {
@@ -284,12 +285,12 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
     }
     
     private void wakeupReceived() {
-        Native.libc().read(pipefd[0], ByteBuffer.allocate(1), 1);
+        Native.libc().read(pipefd[0], new byte[1], 1);
     }
     
     @Override
     public Selector wakeup() {
-        Native.libc().write(pipefd[1], ByteBuffer.allocate(1), 1);
+        Native.libc().write(pipefd[1], new byte[1], 1);
         return this;
     }
 
@@ -299,102 +300,52 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         }
     }
 
-    private static abstract class EventIO {
-        private final int eventSize, identOffset, filterOffset, flagsOffset;
+    private static final class EventIO {
+        private static final EventIO INSTANCE = new EventIO();
+        private final EventLayout layout = new EventLayout(NativeRuntime.getSystemRuntime());
+        private final jnr.ffi.Type uintptr_t = layout.getRuntime().findType(TypeAlias.uintptr_t);
 
         public static EventIO getInstance() {
-            return Native.getRuntime().addressSize() == 8 ? EventIO64.INSTANCE : EventIO32.INSTANCE;
+            return EventIO.INSTANCE;
         }
 
-        public EventIO(int eventSize, int identOffset, int filterOffset, int flagsOffset) {
-            this.eventSize = eventSize;
-            this.identOffset = identOffset;
-            this.filterOffset = filterOffset;
-            this.flagsOffset = flagsOffset;
-        }
-
-
-        abstract void clear(ByteBuffer buf, int index);
-        abstract void putFD(ByteBuffer buf, int index,int fd);
-        abstract int getFD(ByteBuffer buf, int index);
-
-        public final void put(ByteBuffer buf, int index, int fd, int filt, int flags) {
-            putFD(buf, index, fd);
-            putFilter(buf, index, filt);
-            putFlags(buf, index, flags);
+        public final void put(Pointer buf, int index, int fd, int filt, int flags) {
+            buf.putInt(uintptr_t, (index * layout.size()) + layout.ident.offset(), fd);
+            buf.putShort((index * layout.size()) + layout.filter.offset(), (short) filt);
+            buf.putInt((index * layout.size()) + layout.flags.offset(), flags);
         }
         
         public final int size() {
-            return eventSize;
+            return layout.size();
         }
 
-        public final void putFilter(ByteBuffer buf, int index, int filter) {
-            buf.putShort(eventSize * index + filterOffset, (short) filter);
-        }
-        public final int getFilter(ByteBuffer buf, int index) {
-            return buf.getShort(eventSize * index + filterOffset);
+        int getFD(Pointer ptr, int index) {
+            return (int) ptr.getInt(uintptr_t, (index * layout.size()) + layout.ident.offset());
         }
 
-        public final void putFlags(ByteBuffer buf, int index, int flags) {
-            buf.putShort(eventSize * index + flagsOffset, (short) flags);
+        public final void putFilter(Pointer buf, int index, int filter) {
+            buf.putShort((index * layout.size()) + layout.filter.offset(), (short) filter);
         }
 
-        public final int getFlags(ByteBuffer buf, int index) {
-            return buf.getShort(eventSize * index + flagsOffset);
+        public final int getFilter(Pointer buf, int index) {
+            return buf.getShort((index * layout.size()) + layout.filter.offset());
+        }
+
+        public final void putFlags(Pointer buf, int index, int flags) {
+            buf.putShort((index * layout.size()) + layout.flags.offset(), (short) flags);
         }
     }
 
-    private static final class EventIO32 extends EventIO {
-        public static final EventIO INSTANCE = new EventIO32();
-        static final int EVENT_SIZE = 20;
-        static final int IDENT_OFFSET = 0;
-        static final int FILTER_OFFSET = IDENT_OFFSET + 4;
-        static final int FLAGS_OFFSET = FILTER_OFFSET + 2;
-
-        public EventIO32() {
-            super(EVENT_SIZE, IDENT_OFFSET, FILTER_OFFSET, FLAGS_OFFSET);
+    private static class EventLayout extends StructLayout {
+        private EventLayout(jnr.ffi.Runtime runtime) {
+            super(runtime);
         }
-
-
-        public void clear(ByteBuffer buf, int index) {
-            buf.putLong(index, 0L);
-            buf.putLong(index + 8, 0L);
-            buf.putInt(index + 16, 0);
-        }
-        public void putFD(ByteBuffer buf, int index, int fd) {
-            buf.putInt(EVENT_SIZE * index + IDENT_OFFSET, fd);
-        }
-        public int getFD(ByteBuffer buf, int index) {
-            return buf.getInt(EVENT_SIZE * index + IDENT_OFFSET);
-        }
+        public final uintptr_t ident = new uintptr_t();
+        public final int16_t filter = new int16_t();
+        public final u_int16_t flags = new u_int16_t();
+        public final u_int32_t fflags = new u_int32_t();
+        public final intptr_t data = new intptr_t();
+        public final Pointer udata = new Pointer();
     }
 
-    private static final class EventIO64 extends EventIO {
-        public static final EventIO INSTANCE = new EventIO64();
-        static final int EVENT_SIZE = 32;
-        static final int IDENT_OFFSET = 0;
-        static final int FILTER_OFFSET = IDENT_OFFSET + 8;
-        static final int FLAGS_OFFSET = FILTER_OFFSET + 2;
-        static final int FFLAGS_OFFSET = FLAGS_OFFSET + 2;
-        static final int DATA_OFFSET = FFLAGS_OFFSET + 4;
-        static final int UDATA_OFFSET = DATA_OFFSET + 8;
-
-        public EventIO64() {
-            super(EVENT_SIZE, IDENT_OFFSET, FILTER_OFFSET, FLAGS_OFFSET);
-        }
-
-        public void clear(ByteBuffer buf, int index) {
-            for (int i = 0; i < 4; ++i) {
-                buf.putLong(index + (i * 8), 0L);
-            }
-        }
-
-        public void putFD(ByteBuffer buf, int index, int fd) {
-            buf.putLong(EVENT_SIZE * index + IDENT_OFFSET, fd);
-        }
-
-        public int getFD(ByteBuffer buf, int index) {
-            return (int) buf.getLong(EVENT_SIZE * index + IDENT_OFFSET);
-        }
-    }
 }

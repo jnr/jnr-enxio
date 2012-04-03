@@ -19,10 +19,8 @@
 package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
-import jnr.ffi.LastError;
-import jnr.ffi.Library;
+import jnr.ffi.*;
 import jnr.ffi.Runtime;
-import jnr.ffi.Struct;
 import jnr.ffi.annotations.IgnoreError;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
@@ -41,14 +39,21 @@ final class Native {
         public static final int O_NONBLOCK = jnr.constants.platform.OpenFlags.O_NONBLOCK.intValue();
 
         public int close(int fd);
-        public @ssize_t long read(int fd, @Out ByteBuffer data, @size_t long size);
-        public @ssize_t long write(int fd, @In ByteBuffer data, @size_t long size);
+        public @ssize_t int read(int fd, @Out ByteBuffer data, @size_t long size);
+        public @ssize_t int read(int fd, @Out byte[] data, @size_t long size);
+        public @ssize_t int write(int fd, @In ByteBuffer data, @size_t long size);
+        public @ssize_t int write(int fd, @In byte[] data, @size_t long size);
         public int fcntl(int fd, int cmd, int data);
         public int poll(@In @Out ByteBuffer pfds, int nfds, int timeout);
+        public int poll(@In @Out Pointer pfds, int nfds, int timeout);
         public int kqueue();
         public int kevent(int kq, @In ByteBuffer changebuf, int nchanges,
-                @Out ByteBuffer eventbuf, int nevents,
-                @In @Transient Timespec timeout);
+                          @Out ByteBuffer eventbuf, int nevents,
+                          @In @Transient Timespec timeout);
+        public int kevent(int kq,
+                          @In Pointer changebuf, int nchanges,
+                          @Out Pointer eventbuf, int nevents,
+                          @In @Transient Timespec timeout);
         public int pipe(@Out int[] fds);
         public int shutdown(int s, int how);
 
@@ -85,16 +90,16 @@ final class Native {
             throw new IllegalArgumentException("Read-only buffer");
         }
 
-        long n;
+        int n;
         do {
             n = libc().read(fd, dst, dst.remaining());
         } while (n < 0 && Errno.EINTR.equals(getLastError()));
 
         if (n > 0) {
-            dst.position(dst.position() + (int) n);
+            dst.position(dst.position() + n);
         }
 
-        return (int) n;
+        return n;
     }
 
     public static int write(int fd, ByteBuffer src) throws IOException {
@@ -102,16 +107,16 @@ final class Native {
             throw new NullPointerException("Source buffer cannot be null");
         }
 
-        long n;
+        int n;
         do {
             n = libc().write(fd, src, src.remaining());
         } while (n < 0 && Errno.EINTR.equals(getLastError()));
 
         if (n > 0) {
-            src.position(src.position() + (int) n);
+            src.position(src.position() + n);
         }
 
-        return (int) n;
+        return n;
     }
 
     public static void setBlocking(int fd, boolean block) {
