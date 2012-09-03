@@ -30,7 +30,6 @@
     <url>git@github.com:jnr/jnr-enxio.git</url>
   </scm>
 
-
   <developers>
     <developer>
       <id>wmeissner</id>
@@ -49,19 +48,18 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>[4.5,5.0)</version>
+      <version>4.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.jruby.extras</groupId>
+      <groupId>com.github.jnr</groupId>
       <artifactId>jnr-constants</artifactId>
-      <version>[0.8,1.0)</version>
-      <scope>compile</scope>
+      <version>0.8.3</version>
     </dependency>
     <dependency>
       <groupId>com.github.jnr</groupId>
       <artifactId>jnr-ffi</artifactId>
-      <version>[0.7.0,0.8.0)</version>
+      <version>0.7.6</version>
     </dependency>
   </dependencies>
 
