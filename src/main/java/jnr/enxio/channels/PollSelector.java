@@ -179,6 +179,9 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
             }
             keyArray[nfds - 1] = null;
             --nfds;
+            synchronized (selected) {
+                selected.remove(k);
+            }
             keys.remove(k);
         }
         deregister(k);

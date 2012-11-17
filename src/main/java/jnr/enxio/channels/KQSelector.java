@@ -162,6 +162,9 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
                     KQSelectionKey kqs = (KQSelectionKey) k;
                     Descriptor d = descriptors.get(kqs.getFD());
                     deregister(kqs);
+                    synchronized (selected) {
+                        selected.remove(kqs);
+                    }
                     d.keys.remove(kqs);
                     if (d.keys.isEmpty()) {
                         io.put(changebuf, nchanged++, kqs.getFD(), EVFILT_READ, EV_DELETE);
