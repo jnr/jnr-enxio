@@ -18,9 +18,7 @@
 
 package jnr.enxio.channels;
 
-import jnr.constants.platform.Errno;
 import jnr.constants.platform.Shutdown;
-import jnr.ffi.LastError;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
