@@ -29,7 +29,7 @@ public class NativeServerSocketChannel extends AbstractSelectableChannel impleme
     private final int validOps;
 
     public NativeServerSocketChannel(int fd) {
-        this(NativeSelectorProvider.getInstance(), fd, SelectionKey.OP_ACCEPT);
+        this(NativeSelectorProvider.getInstance(), fd, SelectionKey.OP_ACCEPT | SelectionKey.OP_READ);
     }
 
     public NativeServerSocketChannel(SelectorProvider provider, int fd, int ops) {
