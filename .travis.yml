@@ -4,7 +4,7 @@ jdk:
   - openjdk6
 os:
   - linux
-  - osx
+#  - osx
 notifications:
   irc:
     channels:
