@@ -61,8 +61,8 @@ final class Native {
     }
 
     private static final class SingletonHolder {
-        static final LibC libc = Library.loadLibrary("c", LibC.class);
-        static final jnr.ffi.Runtime runtime = Library.getRuntime(libc);
+        static final LibC libc = LibraryLoader.create(LibC.class).load("c");
+        static final jnr.ffi.Runtime runtime = Runtime.getRuntime(libc);
     }
 
     static LibC libc() {
