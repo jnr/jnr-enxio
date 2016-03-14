@@ -42,7 +42,7 @@ import java.nio.channels.Selector;
 public class TCPServer {
     static final String[] libnames = Platform.getNativePlatform().getOS() == Platform.OS.SOLARIS
                         ? new String[] { "socket", "nsl", "c" }
-                        : new String[] { "c" };
+                        : new String[] { Platform.getNativePlatform().getStandardCLibraryName() };
     static final LibC libc = Library.loadLibrary(LibC.class, libnames);
     static final jnr.ffi.Runtime runtime = jnr.ffi.Runtime.getSystemRuntime();
 
