@@ -27,6 +27,7 @@ import jnr.ffi.annotations.Out;
 import jnr.ffi.annotations.Transient;
 import jnr.ffi.types.size_t;
 import jnr.ffi.types.ssize_t;
+import jnr.ffi.Platform;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -61,7 +62,7 @@ final class Native {
     }
 
     private static final class SingletonHolder {
-        static final LibC libc = LibraryLoader.create(LibC.class).load("c");
+        static final LibC libc = LibraryLoader.create(LibC.class).load(Platform.getNativePlatform().getStandardCLibraryName());
         static final jnr.ffi.Runtime runtime = Runtime.getRuntime(libc);
     }
 
