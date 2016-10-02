@@ -6,7 +6,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.lang.reflect.Field;
 
 public class NativeTest {
@@ -21,7 +20,7 @@ public class NativeTest {
         fdField.setAccessible(true);
         int fd = (int)(Integer)fdField.get(descriptor);
         Native.close(fd);
-        expectedEx.expect(IOException.class);
+        expectedEx.expect(NativeException.class);
         Native.close(fd);
     }
 }

@@ -82,7 +82,7 @@ final class Native {
 
         if (rc < 0) {
             String message = String.format("Error closing fd %d: %s", fd, getLastErrorString());
-            throw new IOException(message);
+            throw new NativeException(message, getLastError());
         } else {
             return rc;
         }
