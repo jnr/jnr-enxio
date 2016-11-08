@@ -32,6 +32,7 @@ import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * An implementation of a {@link java.nio.channels.Selector} that uses the BSD (including MacOS)
@@ -100,9 +101,9 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         // deregister all keys
         for (Map.Entry<Integer, Descriptor> entry : descriptors.entrySet()) {
             for (KQSelectionKey k : entry.getValue().keys) {
-	            deregister(k);
-	        }
-	    }
+                    deregister(k);
+                }
+            }
     }
 
     @Override
@@ -115,7 +116,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
                 descriptors.put(k.getFD(), d);
             }
             d.keys.add(k);
-            changed.add(d);
+            handleChangedKey(d);
         }
         k.attach(att);
         return k;
@@ -150,84 +151,11 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         return poll(-1);
     }
 
+    AtomicInteger nchanged = new AtomicInteger(0);
+    
     private int poll(long timeout) {
-        int nchanged = 0;
-        //
-        // Remove any cancelled keys
-        //
-        Set<SelectionKey> cancelled = cancelledKeys();
-        synchronized (cancelled) {
-            synchronized (regLock) {
-                for (SelectionKey k : cancelled) {
-                    KQSelectionKey kqs = (KQSelectionKey) k;
-                    Descriptor d = descriptors.get(kqs.getFD());
-                    deregister(kqs);
-                    synchronized (selected) {
-                        selected.remove(kqs);
-                    }
-                    d.keys.remove(kqs);
-                    if (d.keys.isEmpty()) {
-                        io.put(changebuf, nchanged++, kqs.getFD(), EVFILT_READ, EV_DELETE);
-                        io.put(changebuf, nchanged++, kqs.getFD(), EVFILT_WRITE, EV_DELETE);
-                        descriptors.remove(kqs.getFD());
-                        changed.remove(d);
-                    }
-                    if (nchanged >= MAX_EVENTS) {
-                        Native.libc().kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
-                        nchanged = 0;
-                    }
-                }
-            }
-            cancelled.clear();
-        }
         
-        synchronized (regLock) {
-            for (Descriptor d : changed) {
-                int writers = 0, readers = 0;
-                for (KQSelectionKey k : d.keys) {
-                    if ((k.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ)) != 0) {
-                        ++readers;
-                    }
-                    if ((k.interestOps() & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE)) != 0) {
-                        ++writers;
-                    }
-                }
-                for (Integer filt : new Integer[] { EVFILT_READ, EVFILT_WRITE }) {
-                    int flags = 0;
-                    //
-                    // If no one is interested in events on the fd, disable it
-                    //
-                    if (filt == EVFILT_READ) {
-                        if (readers > 0 && !d.read) {
-                            flags = EV_ADD |EV_ENABLE | EV_CLEAR;
-                            d.read = true;
-                        } else if (readers == 0 && d.read) {
-                            flags = EV_DISABLE;
-                            d.read = false;
-                        }
-                    }
-                    if (filt == EVFILT_WRITE) {
-                        if (writers > 0 && !d.write) {
-                            flags = EV_ADD | EV_ENABLE | EV_CLEAR;
-                            d.write = true;
-                        } else if (writers == 0 && d.write) {
-                            flags = EV_DISABLE;
-                            d.write = false;
-                        }
-                    }
-                    if (DEBUG) System.out.printf("Updating fd %d filt=0x%x flags=0x%x\n",
-                        d.fd, filt, flags);
-                    if (flags != 0) {
-                        io.put(changebuf, nchanged++, d.fd, filt, flags);
-                    }
-                    if (nchanged >= MAX_EVENTS) {
-                        Native.libc().kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
-                        nchanged = 0;
-                    }
-                }
-            }
-            changed.clear();
-        }
+        nchanged.addAndGet(handleCancelledKeys());
 
         Native.Timespec ts = null;
         if (timeout >= 0) {
@@ -242,13 +170,14 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
             begin();
             do {
 
-                nready = Native.libc().kevent(kqfd, changebuf, nchanged, eventbuf, MAX_EVENTS, ts);
+                nready = Native.libc().kevent(kqfd, changebuf, nchanged.get(), eventbuf, MAX_EVENTS, ts);
 
             } while (nready < 0 && Errno.EINTR.equals(Errno.valueOf(Native.getRuntime().getLastError())));
 
             if (DEBUG) System.out.println("kevent returned " + nready + " events ready");
 
         } finally {
+            nchanged.compareAndSet(nchanged.get(), 0);
             end();
         }
 
@@ -286,6 +215,87 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         }
         return updatedKeyCount;
     }
+
+    private int handleCancelledKeys() {
+        Set<SelectionKey> cancelled = cancelledKeys();
+        synchronized (cancelled) {
+            int nchanged = 0;
+            synchronized (regLock) {
+                for (SelectionKey k : cancelled) {
+                    KQSelectionKey kqs = (KQSelectionKey) k;
+                    Descriptor d = descriptors.get(kqs.getFD());
+                    deregister(kqs);
+                    synchronized (selected) {
+                        selected.remove(kqs);
+                    }
+                    d.keys.remove(kqs);
+                    if (d.keys.isEmpty()) {
+                        io.put(changebuf, nchanged++, kqs.getFD(), EVFILT_READ, EV_DELETE);
+                        io.put(changebuf, nchanged++, kqs.getFD(), EVFILT_WRITE, EV_DELETE);
+                        descriptors.remove(kqs.getFD());
+                    }
+                    if (nchanged >= MAX_EVENTS) {
+                        Native.libc().kevent(kqfd, changebuf, nchanged, null, 0, ZERO_TIMESPEC);
+                        nchanged = 0;
+                    }
+                }
+            }
+            cancelled.clear();
+            return nchanged;
+        }
+        
+    }
+
+    private void handleChangedKey(Descriptor changed) {
+        synchronized (regLock) {
+            int _nchanged = 0;
+            
+            int writers = 0, readers = 0;
+            for (KQSelectionKey k : changed.keys) {
+                if ((k.interestOps() & (SelectionKey.OP_ACCEPT | SelectionKey.OP_READ)) != 0) {
+                    ++readers;
+                }
+                if ((k.interestOps() & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE)) != 0) {
+                    ++writers;
+                }
+            }
+            for (Integer filt : new Integer[] { EVFILT_READ, EVFILT_WRITE }) {
+                int flags = 0;
+                //
+                // If no one is interested in events on the fd, disable it
+                //
+                if (filt == EVFILT_READ) {
+                    if (readers > 0 && !changed.read) {
+                        flags = EV_ADD |EV_ENABLE | EV_CLEAR;
+                        changed.read = true;
+                    } else if (readers == 0 && changed.read) {
+                        flags = EV_DISABLE;
+                        changed.read = false;
+                    }
+                }
+                if (filt == EVFILT_WRITE) {
+                    if (writers > 0 && !changed.write) {
+                        flags = EV_ADD | EV_ENABLE | EV_CLEAR;
+                        changed.write = true;
+                    } else if (writers == 0 && changed.write) {
+                        flags = EV_DISABLE;
+                        changed.write = false;
+                    }
+                }
+                if (DEBUG) System.out.printf("Updating fd %d filt=0x%x flags=0x%x\n",
+                    changed.fd, filt, flags);
+                if (flags != 0) {
+                    io.put(changebuf, _nchanged++, changed.fd, filt, flags);
+                }
+                if (_nchanged >= MAX_EVENTS) {
+                    Native.libc().kevent(kqfd, changebuf, _nchanged, null, 0, ZERO_TIMESPEC);
+                    _nchanged = 0;
+                }
+            }
+            
+            nchanged.addAndGet(_nchanged);
+        }        
+    }
     
     private void wakeupReceived() {
         Native.libc().read(pipefd[0], new byte[1], 1);
@@ -299,7 +309,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
 
     void interestOps(KQSelectionKey k, int ops) {
         synchronized (regLock) {
-            changed.add(descriptors.get(k.getFD()));
+            handleChangedKey(descriptors.get(k.getFD()));
         }
     }
 
