@@ -88,7 +88,13 @@ public class NativeSocketChannel extends AbstractSelectableChannel
     public int write(ByteBuffer src) throws IOException {
         int n = Native.write(fd, src);
         if (n < 0) {
-            throw new IOException(Native.getLastErrorString());
+            switch (Native.getLastError()) {
+                case EAGAIN:
+                case EWOULDBLOCK:
+                    return 0;
+            default:
+                throw new IOException(Native.getLastErrorString());
+            }
         }
 
         return n;
