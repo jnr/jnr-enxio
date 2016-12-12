@@ -74,13 +74,18 @@ final class Native {
         return SingletonHolder.runtime;
     }
 
-    public static int close(int fd) {
+    public static int close(int fd) throws IOException {
         int rc;
         do {
             rc = libc().close(fd);
         } while (rc < 0 && Errno.EINTR.equals(getLastError()));
 
-        return rc;
+        if (rc < 0) {
+            String message = String.format("Error closing fd %d: %s", fd, getLastErrorString());
+            throw new NativeException(message, getLastError());
+        } else {
+            return rc;
+        }
     }
 
     public static int read(int fd, ByteBuffer dst) throws IOException {
