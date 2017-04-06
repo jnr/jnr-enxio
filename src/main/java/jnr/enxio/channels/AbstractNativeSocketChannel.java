@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Wayne Meissner
+ * Copyright (C) 2016 Marcus Linke
  *
  * This file is part of the JNR project.
  *
@@ -18,32 +18,34 @@
 
 package jnr.enxio.channels;
 
-import jnr.constants.platform.Shutdown;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.spi.AbstractSelectableChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 
-public class NativeSocketChannel extends AbstractSelectableChannel
-        implements ByteChannel, NativeSelectableChannel {
+import jnr.constants.platform.Shutdown;
+
+public abstract class AbstractNativeSocketChannel extends SocketChannel
+    implements ByteChannel, NativeSelectableChannel {
 
     private final Common common;
-    private final int validOps;
 
-    public NativeSocketChannel(int fd) {
-        this(NativeSelectorProvider.getInstance(), fd, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+    public AbstractNativeSocketChannel(int fd) {
+        this(NativeSelectorProvider.getInstance(), fd);
     }
 
-    public NativeSocketChannel(int fd, int ops) {
-        this(NativeSelectorProvider.getInstance(), fd, ops);
-    }
-
-    NativeSocketChannel(SelectorProvider provider, int fd, int ops) {
+    AbstractNativeSocketChannel(SelectorProvider provider, int fd) {
         super(provider);
         common = new Common(fd);
-        this.validOps = ops;
+    }
+
+    public void setFD(int fd) {
+        common.setFD(fd);
+    }
+
+    public final int getFD() {
+        return common.getFD();
     }
 
     @Override
@@ -56,36 +58,44 @@ public class NativeSocketChannel extends AbstractSelectableChannel
         Native.setBlocking(common.getFD(), block);
     }
 
-    @Override
-    public final int validOps() {
-        return validOps;
-    }
-    public final int getFD() {
-        return common.getFD();
-    }
-
     public int read(ByteBuffer dst) throws IOException {
         return common.read(dst);
+    }
+
+    @Override
+    public long read(ByteBuffer[] dsts, int offset,
+            int length) throws IOException {
+        return common.read(dsts, offset, length);
     }
 
     public int write(ByteBuffer src) throws IOException {
         return common.write(src);
     }
-    
-    public void shutdownInput() throws IOException {
+
+    @Override
+    public long write(ByteBuffer[] srcs, int offset,
+            int length) throws IOException {
+        return common.write(srcs, offset, length);
+    }
+
+    @Override
+    public SocketChannel shutdownInput() throws IOException {
         int n = Native.shutdown(common.getFD(), SHUT_RD);
         if (n < 0) {
             throw new IOException(Native.getLastErrorString());
         }
+        return this;
     }
-    
-    public void shutdownOutput() throws IOException {
+
+    @Override
+    public SocketChannel shutdownOutput() throws IOException {
         int n = Native.shutdown(common.getFD(), SHUT_WR);
         if (n < 0) {
             throw new IOException(Native.getLastErrorString());
         }
+        return this;
     }
-    
-    private final static int SHUT_RD = Shutdown.SHUT_RD.intValue();
-    private final static int SHUT_WR = Shutdown.SHUT_WR.intValue();
+
+    private static final int SHUT_RD = Shutdown.SHUT_RD.intValue();
+    private static final int SHUT_WR = Shutdown.SHUT_WR.intValue();
 }
