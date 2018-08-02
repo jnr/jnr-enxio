@@ -63,7 +63,6 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
         putPollFD(0, pipefd[0]);
         putPollEvents(0, POLLIN);
         nfds = 1;
-        keyArray = new PollSelectionKey[1];
     }
     
     private void putPollFD(int idx, int fd) {
