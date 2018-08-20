@@ -107,11 +107,8 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
     protected SelectionKey register(AbstractSelectableChannel ch, int ops, Object att) {
         KQSelectionKey k = new KQSelectionKey(this, (NativeSelectableChannel) ch, ops);
         synchronized (regLock) {
-            Descriptor d = descriptors.get(k.getFD());
-            if (d == null) {
-                d = new Descriptor(k.getFD());
-                descriptors.put(k.getFD(), d);
-            }
+            Descriptor d = new Descriptor(k.getFD());
+            descriptors.put(k.getFD(), d);
             d.keys.add(k);
             handleChangedKey(d);
         }
