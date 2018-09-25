@@ -3,7 +3,6 @@ jdk:
   - openjdk9
   - openjdk8
   - openjdk7
-  - openjdk6
 os:
   - linux
 #  - osx
@@ -18,5 +17,4 @@ notifications:
 addons:
   apt:
     packages:
-      - openjdk-6-jdk
       - openjdk-7-jdk
