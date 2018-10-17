@@ -30,16 +30,27 @@ public class NativeDeviceChannel extends AbstractSelectableChannel implements By
 
     private final int fd;
     private final int validOps;
+    private final boolean isFile;
 
     public NativeDeviceChannel(int fd) {
-        this(NativeSelectorProvider.getInstance(), fd, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        this(fd, false);
     }
-    public NativeDeviceChannel(SelectorProvider provider, int fd, int ops) {
+
+    public NativeDeviceChannel(int fd, boolean isFile) {
+        this(selectorProvider(isFile), fd, SelectionKey.OP_READ | SelectionKey.OP_WRITE, isFile);
+    }
+
+    public NativeDeviceChannel(SelectorProvider provider, int fd, int ops, boolean isFile) {
         super(provider);
         this.fd = fd;
         this.validOps = ops;
+        this.isFile = isFile;
     }
-    
+
+    private static SelectorProvider selectorProvider(boolean isFile) {
+        return (isFile) ? NativeFileSelectorProvider.getInstance() : NativeSelectorProvider.getInstance();
+    }
+
     @Override
     protected void implCloseSelectableChannel() throws IOException {
         int n = Native.close(fd);
