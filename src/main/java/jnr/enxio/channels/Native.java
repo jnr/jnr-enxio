@@ -32,7 +32,7 @@ import jnr.ffi.Platform;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-final class Native {
+public final class Native {
 
     public static interface LibC {
         public static final int F_GETFL = jnr.constants.platform.Fcntl.F_GETFL.intValue();
@@ -145,7 +145,7 @@ final class Native {
         return libc().strerror(LastError.getLastError(getRuntime()));
     }
 
-    static Errno getLastError() {
+    public static Errno getLastError() {
         return Errno.valueOf(LastError.getLastError(getRuntime()));
     }
 
