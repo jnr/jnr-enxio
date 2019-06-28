@@ -19,7 +19,9 @@
 package jnr.enxio.channels;
 
 import jnr.constants.platform.Errno;
+import jnr.enxio.channels.WinLibCAdapter.LibMSVCRT;
 import jnr.ffi.*;
+import jnr.ffi.Platform.OS;
 import jnr.ffi.Runtime;
 import jnr.ffi.annotations.IgnoreError;
 import jnr.ffi.annotations.In;
@@ -62,8 +64,20 @@ public final class Native {
     }
 
     private static final class SingletonHolder {
-        static final LibC libc = LibraryLoader.create(LibC.class).load(Platform.getNativePlatform().getStandardCLibraryName());
-        static final jnr.ffi.Runtime runtime = Runtime.getRuntime(libc);
+        static final LibC libc;
+        static final jnr.ffi.Runtime runtime;
+
+        static {
+            Platform platform =  Platform.getNativePlatform();
+            LibC straight = LibraryLoader.create(LibC.class).load(platform.getStandardCLibraryName());
+            if (platform.getOS() == OS.WINDOWS)    {
+                LibMSVCRT mslib = LibraryLoader.create(LibMSVCRT.class).load(platform.getStandardCLibraryName());
+                libc = new WinLibCAdapter(mslib);
+            } else {
+                libc = straight;
+            }
+            runtime = Runtime.getRuntime(libc);
+        }
     }
 
     static LibC libc() {
