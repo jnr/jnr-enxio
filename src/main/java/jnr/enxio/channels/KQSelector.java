@@ -214,13 +214,13 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
             synchronized (regLock) {
                 for (SelectionKey k : cancelled) {
                     KQSelectionKey kqs = (KQSelectionKey) k;
-                    Descriptor d = descriptors.get(kqs.getFD());
                     deregister(kqs);
                     synchronized (selected) {
                         selected.remove(kqs);
                     }
-                    d.keys.remove(kqs);
-                    if (d.keys.isEmpty()) {
+                    Descriptor d = descriptors.get(kqs.getFD());
+                    if (d != null) d.keys.remove(kqs);
+                    if (d == null || d.keys.isEmpty()) {
                         io.put(changebuf, nchanged++, kqs.getFD(), EVFILT_READ, EV_DELETE);
                         io.put(changebuf, nchanged++, kqs.getFD(), EVFILT_WRITE, EV_DELETE);
                         descriptors.remove(kqs.getFD());
