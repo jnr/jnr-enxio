@@ -68,8 +68,13 @@ public final class Native {
         static final jnr.ffi.Runtime runtime;
 
         static {
-            Platform platform =  Platform.getNativePlatform();
-            LibC straight = LibraryLoader.create(LibC.class).load(platform.getStandardCLibraryName());
+            Platform platform = Platform.getNativePlatform();
+            LibraryLoader<LibC> loader = LibraryLoader.create(LibC.class);
+            loader.library(platform.getStandardCLibraryName());
+            if (platform.getOS() == OS.SOLARIS) {
+                loader.library("socket");
+            }
+            LibC straight = loader.load();
             if (platform.getOS() == OS.WINDOWS)    {
                 LibMSVCRT mslib = LibraryLoader.create(LibMSVCRT.class).load(platform.getStandardCLibraryName());
                 libc = new WinLibCAdapter(mslib);
