@@ -19,6 +19,7 @@ package jnr.enxio.channels;
 import jnr.constants.platform.Errno;
 
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
@@ -147,8 +148,8 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
                 ByteBuffer newBuffer = ByteBuffer.allocateDirect(newArray.length * 8);
                 if (pollData != null) {
                     newBuffer.put(pollData);
-                }
-                newBuffer.position(0);
+                }// force Java 8 compatible Buffer method
+                ((Buffer) newBuffer).position(0);
                 pollData = newBuffer.order(ByteOrder.nativeOrder());
             }
             k.setIndex(nfds - 1);
