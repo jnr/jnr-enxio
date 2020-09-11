@@ -32,7 +32,6 @@ import jnr.ffi.types.ssize_t;
 import jnr.ffi.Platform;
 
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 public final class Native {
@@ -122,8 +121,7 @@ public final class Native {
         } while (n < 0 && Errno.EINTR.equals(getLastError()));
 
         if (n > 0) {
-            // force Java 8 compatible Buffer method
-            ((Buffer) dst).position(dst.position() + n);
+            dst.position(dst.position() + n);
         }
 
         return n;
@@ -140,8 +138,7 @@ public final class Native {
         } while (n < 0 && Errno.EINTR.equals(getLastError()));
 
         if (n > 0) {
-            // force Java 8 compatible Buffer method
-            ((Buffer) src).position(src.position() + n);
+            src.position(src.position() + n);
         }
 
         return n;
