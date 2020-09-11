@@ -124,26 +124,32 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+      </plugin>
     </plugins>
   </build>
 
   <profiles>
-
     <profile>
-      <id>old-jdk</id>
+      <id>java9</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <!-- Use -release compiler option rather than source/target if 9+ -->
+              <release>${maven.compiler.target}</release>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
       <activation>
-        <jdk>(,1.6]</jdk>
+        <jdk>[9,)</jdk>
       </activation>
-
-      <dependencies>
-        <dependency>
-          <groupId>com.github.jnr</groupId>
-          <artifactId>jnr-enxio-protocolfamily</artifactId>
-          <version>1.0</version>
-          <scope>provided</scope>
-          <optional>true</optional>
-        </dependency>
-      </dependencies>
     </profile>
   </profiles>
 </project>
