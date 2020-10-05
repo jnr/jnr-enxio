@@ -116,7 +116,7 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
 
     @Override
     public Set<SelectionKey> keys() {
-        return new HashSet<SelectionKey>(Arrays.asList(keyArray).subList(0, nfds));
+        return new HashSet<SelectionKey>(Arrays.asList(keyArray).subList(1, nfds));
     }
 
     @Override
