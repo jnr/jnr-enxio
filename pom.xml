@@ -10,7 +10,7 @@
   <groupId>com.github.jnr</groupId>
   <artifactId>jnr-enxio</artifactId>
   <packaging>jar</packaging>
-  <version>0.32.3-SNAPSHOT</version>
+  <version>0.32.3</version>
   <name>jnr-enxio</name>
   <description>Native I/O access for java</description>
   <url>http://github.com/jnr/jnr-enxio</url>
@@ -53,7 +53,7 @@
     <dependency>
       <groupId>com.github.jnr</groupId>
       <artifactId>jnr-constants</artifactId>
-      <version>0.10.0</version>
+      <version>0.10.1</version>
     </dependency>
     <dependency>
       <groupId>com.github.jnr</groupId>
