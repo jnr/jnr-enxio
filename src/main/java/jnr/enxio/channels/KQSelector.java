@@ -24,6 +24,7 @@ import jnr.ffi.Pointer;
 import jnr.ffi.StructLayout;
 import jnr.ffi.TypeAlias;
 import jnr.ffi.provider.jffi.NativeRuntime;
+import jnr.ffi.Platform;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -301,8 +302,35 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
 
     private static final class EventIO {
         private static final EventIO INSTANCE = new EventIO();
-        private final EventLayout layout = new EventLayout(NativeRuntime.getSystemRuntime());
-        private final jnr.ffi.Type uintptr_t = layout.getRuntime().findType(TypeAlias.uintptr_t);
+        private final EventLayout layout;
+        private final jnr.ffi.Type uintptr_t;
+
+        private EventIO() {
+            boolean is_freebsd_12_or_later = false;
+            if(Platform.getNativePlatform().getOS() == Platform.OS.FREEBSD) {
+                String version = System.getProperty("os.version");
+                if(version != null) {
+                    int tr_i = -1;
+                    for(char c : new char[] { ' ', '_', '-', '+', '.' }) {
+                        int i = version.indexOf(c);
+                        if(i >= 0 && (tr_i == -1 || tr_i > i)) tr_i = i;
+                    }
+                    if(tr_i >= 0) version = version.substring(0, tr_i);
+                    try {
+                        int freebsd_major_version = Integer.parseInt(version);
+                        if(freebsd_major_version > 11) is_freebsd_12_or_later = true;
+                    } catch(NumberFormatException e) {
+                        if(DEBUG) e.printStackTrace();
+                    }
+                }
+            }
+            if(is_freebsd_12_or_later) {
+                layout = new FreeBSD12EventLayout(NativeRuntime.getSystemRuntime());
+            } else {
+                layout = new LegacyEventLayout(NativeRuntime.getSystemRuntime());
+            }
+            uintptr_t = layout.getRuntime().findType(TypeAlias.uintptr_t);
+        }
 
         public static EventIO getInstance() {
             return EventIO.INSTANCE;
@@ -335,7 +363,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         }
     }
 
-    private static class EventLayout extends StructLayout {
+    private static abstract class EventLayout extends StructLayout {
         private EventLayout(jnr.ffi.Runtime runtime) {
             super(runtime);
         }
@@ -343,7 +371,22 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         public final int16_t filter = new int16_t();
         public final u_int16_t flags = new u_int16_t();
         public final u_int32_t fflags = new u_int32_t();
+    }
+
+    private static class LegacyEventLayout extends EventLayout {
+        private LegacyEventLayout(jnr.ffi.Runtime runtime) {
+            super(runtime);
+        }
         public final intptr_t data = new intptr_t();
         public final Pointer udata = new Pointer();
+    }
+
+    private static class FreeBSD12EventLayout extends EventLayout {
+        private FreeBSD12EventLayout(jnr.ffi.Runtime runtime) {
+            super(runtime);
+        }
+        public final int64_t data = new int64_t();
+        public final Pointer udata = new Pointer();
+        public final u_int64_t[] ext = array(new u_int64_t[4]);
     }
 }
