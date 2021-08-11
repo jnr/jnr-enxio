@@ -311,7 +311,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         public final void put(Pointer buf, int index, int fd, int filt, int flags) {
             buf.putInt(uintptr_t, (index * layout.size()) + layout.ident.offset(), fd);
             buf.putShort((index * layout.size()) + layout.filter.offset(), (short) filt);
-            buf.putInt((index * layout.size()) + layout.flags.offset(), flags);
+            buf.putShort((index * layout.size()) + layout.flags.offset(), (short)flags);
         }
         
         public final int size() {
