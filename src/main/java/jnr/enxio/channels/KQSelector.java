@@ -156,7 +156,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
             ts = new Native.Timespec(sec, nsec);
         }
 
-        if (DEBUG) System.out.printf("nchanged=%d\n", nchanged);
+        if (DEBUG) System.err.printf("nchanged=%d\n", nchanged);
         int nready = 0;
         try {
             begin();
@@ -166,7 +166,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
 
             } while (nready < 0 && Errno.EINTR.equals(Errno.valueOf(Native.getRuntime().getLastError())));
 
-            if (DEBUG) System.out.println("kevent returned " + nready + " events ready");
+            if (DEBUG) System.err.println("kevent returned " + nready + " events ready");
 
         } finally {
             end();
@@ -180,7 +180,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
 
                 if (d != null) {
                     int filt = io.getFilter(eventbuf, i);
-                    if (DEBUG) System.out.printf("fd=%d filt=0x%x\n", d.fd, filt);
+                    if (DEBUG) System.err.printf("fd=%d filt=0x%x\n", d.fd, filt);
                     for (KQSelectionKey k : d.keys) {
                         int iops = k.interestOps();
                         int ops = 0;
@@ -199,7 +199,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
                     }
 
                 } else if (fd == pipefd[0]) {
-                    if (DEBUG) System.out.println("Waking up");
+                    if (DEBUG) System.err.println("Waking up");
                     wakeupReceived();
                 }
             }
@@ -272,7 +272,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         changed.write = false;
                     }
                 }
-                if (DEBUG) System.out.printf("Updating fd %d filt=0x%x flags=0x%x\n",
+                if (DEBUG) System.err.printf("Updating fd %d filt=0x%x flags=0x%x\n",
                     changed.fd, filt, flags);
                 if (flags != 0) {
                     io.put(changebuf, _nchanged++, changed.fd, filt, flags);
