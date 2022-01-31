@@ -138,23 +138,6 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <!-- Use -release compiler option rather than source/target if 9+ -->
-              <release>${maven.compiler.target}</release>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
-            <configuration>
-              <!-- Use -release compiler option rather than source/target if 9+ -->
-              <release>${maven.compiler.target}</release>
-            </configuration>
-          </plugin>
-          <plugin>
             <artifactId>maven-surefire-plugin</artifactId>
             <version>3.0.0-M5</version>
             <configuration>
@@ -167,6 +150,9 @@
       <activation>
         <jdk>[9,)</jdk>
       </activation>
+      <properties>
+        <maven.compiler.release>8</maven.compiler.release>
+      </properties>
     </profile>
   </profiles>
 </project>
