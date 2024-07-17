@@ -27,9 +27,11 @@ import jnr.ffi.annotations.IgnoreError;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
 import jnr.ffi.annotations.Transient;
+import jnr.ffi.annotations.Variadic;
 import jnr.ffi.types.size_t;
 import jnr.ffi.types.ssize_t;
 import jnr.ffi.Platform;
+import jnr.ffi.types.u_int64_t;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,7 +48,8 @@ public final class Native {
         public @ssize_t int read(int fd, @Out byte[] data, @size_t long size);
         public @ssize_t int write(int fd, @In ByteBuffer data, @size_t long size);
         public @ssize_t int write(int fd, @In byte[] data, @size_t long size);
-        public int fcntl(int fd, int cmd, int data);
+        @Variadic(fixedCount = 2)
+        public int fcntl(int fd, int cmd, @u_int64_t int data);
         public int poll(@In @Out ByteBuffer pfds, int nfds, int timeout);
         public int poll(@In @Out Pointer pfds, int nfds, int timeout);
         public int kqueue();
@@ -154,6 +157,12 @@ public final class Native {
         }
 
         libc().fcntl(fd, LibC.F_SETFL, flags);
+    }
+
+    public static boolean getBlocking(int fd) {
+        int flags = libc().fcntl(fd, LibC.F_GETFL, 0);
+
+        return !((flags & LibC.O_NONBLOCK) == LibC.O_NONBLOCK);
     }
     
     public static int shutdown(int fd, int how) {
