@@ -158,6 +158,12 @@ public final class Native {
 
         libc().fcntl(fd, LibC.F_SETFL, flags);
     }
+
+    public static boolean getBlocking(int fd) {
+        int flags = libc().fcntl(fd, LibC.F_GETFL, 0);
+
+        return !((flags & LibC.O_NONBLOCK) == LibC.O_NONBLOCK);
+    }
     
     public static int shutdown(int fd, int how) {
         return libc().shutdown(fd, how);
