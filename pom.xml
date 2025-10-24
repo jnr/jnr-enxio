@@ -3,7 +3,7 @@
   <groupId>com.github.jnr</groupId>
   <artifactId>jnr-enxio</artifactId>
   <packaging>jar</packaging>
-  <version>0.32.19</version>
+  <version>0.32.20-SNAPSHOT</version>
   <name>jnr-enxio</name>
   <description>Native I/O access for java</description>
   <url>http://github.com/jnr/jnr-enxio</url>
