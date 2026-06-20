@@ -26,10 +26,12 @@ jobs:
       - name: Set up JDK toolchains
         uses: actions/setup-java@v5
         with:
+          # test version for testing, 8 for build steps requiring 8, 17 as base Maven host
           java-version: |
             ${{ matrix.java-test-version }}
+            8
             17
           cache: maven
           distribution: 'zulu'
       - name: Build with Maven
-        run: mvn -B package --file pom.xml
+        run: mvn -B package --file pom.xml -Djnr.test.toolchain=8
