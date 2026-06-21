@@ -1,5 +1,6 @@
 package jnr.enxio.channels;
 
+import jnr.ffi.Platform;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -16,6 +17,9 @@ public class NativeTest {
 
     @Test
     public void closeThrowsOnNativeError() throws Exception {
+        // Skip on non-unix
+        if (!Platform.getNativePlatform().isUnix()) return;
+
         FileOutputStream fos = new FileOutputStream("/dev/null");
         FileDescriptor descriptor = fos.getFD();
         Field fdField = descriptor.getClass().getDeclaredField("fd");
@@ -28,6 +32,9 @@ public class NativeTest {
 
     @Test
     public void setBlocking() throws Exception {
+        // Skip on non-unix
+        if (!Platform.getNativePlatform().isUnix()) return;
+
         Pipe pipe = Pipe.open();
         Pipe.SinkChannel sink = pipe.sink();
 //        sink.getClass().getModule().addOpens("sun.nio.ch", NativeTest.class.getModule());
