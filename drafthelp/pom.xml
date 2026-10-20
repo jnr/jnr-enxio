@@ -14,7 +14,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.release>21</maven.compiler.release>
+		<maven.compiler.release>11</maven.compiler.release>
 	</properties>
 
 	<dependencyManagement>
@@ -52,17 +52,17 @@
 		<dependency>
 			<groupId>com.github.jnr</groupId>
 			<artifactId>jnr-posix</artifactId>
-			<version>3.2.5-SNAPSHOT</version>
+			<version>3.2.4</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.jnr</groupId>
 			<artifactId>jnr-enxio</artifactId>
-			<version>0.33.4-SNAPSHOT</version>
+			<version>0.33.3</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.jnr</groupId>
 			<artifactId>jnr-constants</artifactId>
-			<version>0.11.3-SNAPSHOT</version>
+			<version>0.11.2</version>
 		</dependency>
 		<dependency> 
   <groupId>ch.qos.logback</groupId>

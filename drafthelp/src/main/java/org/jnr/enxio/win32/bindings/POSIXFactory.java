@@ -1,10 +1,8 @@
 package org.jnr.enxio.win32.bindings;
 
 import jnr.constants.Constant;
-import jnr.ffi.Library;
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.LibraryOption;
-import jnr.ffi.Struct;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,11 +18,8 @@ import jnr.posix.FileStat;
 import jnr.posix.HANDLE;
 import jnr.posix.MsgHdr;
 import jnr.posix.NativeTimes;
-import jnr.posix.POSIXTypeMapper;
 import jnr.posix.SimpleFunctionMapper;
 import jnr.posix.WString;
-import jnr.posix.util.DefaultPOSIXHandler;
-import jnr.posix.util.Platform;
 
 import java.util.Map;
 

@@ -27,15 +27,13 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.jnr.enxio.win32.WrappedW32Handle.Channel;
-import org.jnr.enxio.win32.WrappedW32Handle.WrappedType;
+import org.jnr.enxio.win32.bindings.WindowsFunctions;
 
 import jnr.constants.platform.LastError;
 import jnr.enxio.channels.Native;
 import jnr.enxio.channels.NativeSelectableChannel;
 import jnr.ffi.byref.IntByReference;
 import jnr.posix.HANDLE;
-import jnr.posix.WindowsPOSIX;
 
 /**
  * C (MSVCRT) fd-based Pipe SinkChanel (write), always selected (true)
@@ -86,7 +84,7 @@ public class C_PipeSinkTrueChannel extends Pipe.SinkChannel implements NativeSel
     	if (needsCancel.get())// avoid a write blocking + close hang
     		if (!win32Provider().getWinLibC().CancelIoEx(handle, null))
     		{
-          	  	var ws = WindowsPOSIX.mapErrorToErrno(win32Provider().getWinPosix().errno());
+          	  	var ws = WindowsFunctions.mapErrorToErrno(win32Provider().getWinPosix().errno());
           	  	System.err.println("cwx = " + ws + " n = ");
           	  LastError val =  LastError.valueOf(win32Provider().getWinPosix().errno());
           	  System.err.println("Last error was " + val + " || " + win32Provider().getWinPosix().errno());
@@ -101,7 +99,7 @@ public class C_PipeSinkTrueChannel extends Pipe.SinkChannel implements NativeSel
     @Override
     protected void implConfigureBlocking(boolean block) throws IOException {
 //        Native.setBlocking(fd, block);
-    	IntByReference mode = new IntByReference(block ? WindowsPOSIX.PIPE_WAIT : WindowsPOSIX.PIPE_NOWAIT);
+    	IntByReference mode = new IntByReference(block ? WindowsFunctions.PIPE_WAIT : WindowsFunctions.PIPE_NOWAIT);
     	if (!win32Provider().getWinLibC().SetNamedPipeHandleState(handle, mode, null, null))
     	{
     		new RuntimeException("it bad"); // TODO: fixme
@@ -126,7 +124,7 @@ public class C_PipeSinkTrueChannel extends Pipe.SinkChannel implements NativeSel
     	}
         if (n < 0) {
 
-      	  	var ws = WindowsPOSIX.mapErrorToErrno(win32Provider().getWinPosix().errno());
+      	  	var ws = WindowsFunctions.mapErrorToErrno(win32Provider().getWinPosix().errno());
       	  	System.err.println("wx = " + ws + " n = " + n);
       	  LastError val =  LastError.valueOf(win32Provider().getWinPosix().errno());
       	  System.err.println("Last error was " + val + " || " + win32Provider().getWinPosix().errno());

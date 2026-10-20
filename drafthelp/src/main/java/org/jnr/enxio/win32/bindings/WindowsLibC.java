@@ -1,24 +1,13 @@
 package org.jnr.enxio.win32.bindings;
 
 import jnr.ffi.Pointer;
-import jnr.ffi.Variable;
-import jnr.ffi.Struct.AsciiString;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
 import jnr.ffi.annotations.StdCall;
 import jnr.ffi.annotations.Transient;
 import jnr.ffi.byref.IntByReference;
-
-import java.nio.ByteBuffer;
-
-import jnr.posix.FileStat;
 import jnr.posix.HANDLE;
-import jnr.posix.WString;
 import jnr.posix.WindowsSecurityAttributes;
-import jnr.posix.windows.SystemTime;
-import jnr.posix.windows.WindowsByHandleFileInformation;
-import jnr.posix.windows.WindowsFileInformation;
-import jnr.posix.windows.WindowsFindData;
 
 public interface WindowsLibC{
 

@@ -16,9 +16,6 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import org.jnr.enxio.win32.WrappedW32Handle.Channel;
-
-import jnr.enxio.channels.Native;
 import jnr.ffi.byref.IntByReference;
 import jnr.posix.HANDLE;
 
