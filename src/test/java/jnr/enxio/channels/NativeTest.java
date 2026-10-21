@@ -57,42 +57,28 @@ public class NativeTest {
         Assert.assertEquals(false, Native.getBlocking(fd));
     }
 
-    /**
-     * kqueue identifies a kevent by its (ident, filter) pair, so a descriptor that is both
-     * readable and writable can be reported twice for the same key. The selector must
-     * accumulate the ready ops across those events rather than let the second overwrite the
-     * first.
-     */
     @Test
-    public void readableAndWritableReportedTogether() throws Exception {
-        // Skip on non-unix
+    public void selectReportsReadableAndWritableTogether() throws Exception {
         if (!Platform.getNativePlatform().isUnix()) return;
 
-        // a socketpair is the one cheap way to get an fd that is readable and writable at once
+        // kqueue reports EVFILT_READ and EVFILT_WRITE as separate events for one key;
+        // the selector must merge them, not let the second overwrite the first
         int[] fds = new int[2];
         Assert.assertEquals(0, SocketPair.INSTANCE.socketpair(
                 AddressFamily.AF_UNIX.intValue(), Sock.SOCK_STREAM.intValue(), 0, fds));
 
-        NativeSocketChannel local = new NativeSocketChannel(fds[0]);
-        NativeSocketChannel remote = new NativeSocketChannel(fds[1]);
-        Selector selector = NativeSelectorProvider.getInstance().openSelector();
-        try {
+        try (Selector selector = NativeSelectorProvider.getInstance().openSelector();
+             NativeSocketChannel local = new NativeSocketChannel(fds[0]);
+             NativeSocketChannel remote = new NativeSocketChannel(fds[1])) {
             remote.write(ByteBuffer.wrap(new byte[] { 'x' }));
-
             local.configureBlocking(false);
             SelectionKey key = local.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
-            Assert.assertEquals("one key became ready", 1, selector.selectNow());
-            Assert.assertTrue("expected readable", key.isReadable());
-            Assert.assertTrue("expected writable", key.isWritable());
-        } finally {
-            selector.close();
-            local.close();
-            remote.close();
+            Assert.assertEquals(1, selector.selectNow());
+            Assert.assertEquals(SelectionKey.OP_READ | SelectionKey.OP_WRITE, key.readyOps());
         }
     }
 
-    /** Declared here rather than in {@link Native} because only this test needs it. */
     public interface SocketPair {
         SocketPair INSTANCE = LibraryLoader.create(SocketPair.class)
                 .load(Platform.getNativePlatform().getStandardCLibraryName());
