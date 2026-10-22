@@ -151,7 +151,9 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         int nchanged = handleCancelledKeys();
 
         Native.Timespec ts = null;
-        if (timeout >= 0) {
+        if (timeout == 0) {
+            ts = ZERO_TIMESPEC;
+        } else if (timeout > 0) {
             long sec = TimeUnit.MILLISECONDS.toSeconds(timeout);
             long nsec = TimeUnit.MILLISECONDS.toNanos(timeout % 1000);
             ts = new Native.Timespec(sec, nsec);
