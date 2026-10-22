@@ -29,7 +29,9 @@ class KQSelectionKey extends AbstractSelectionKey {
     private final NativeSelectableChannel channel;
     private int interestOps = 0;
     private int readyOps = 0;
-    
+    // the selector's pollCount when this key was last counted as updated
+    int lastPolled;
+
     public KQSelectionKey(KQSelector selector, NativeSelectableChannel channel, int ops) {
         this.selector = selector;
         this.channel = channel;

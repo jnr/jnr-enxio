@@ -59,6 +59,7 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
     private final Object regLock = new Object();
     private final Map<Integer, Descriptor> descriptors = new ConcurrentHashMap<Integer, Descriptor>();
     private final Set<SelectionKey> selected = new LinkedHashSet<SelectionKey>();
+    private int pollCount;
     private final Native.Timespec ZERO_TIMESPEC = new Native.Timespec(0, 0);  
 
     public KQSelector(NativeSelectorProvider provider) {
@@ -174,7 +175,9 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
         }
 
         int updatedKeyCount = 0;
-        Set<KQSelectionKey> updated = new HashSet<KQSelectionKey>();
+        // EVFILT_READ and EVFILT_WRITE are separate kevents, so one key can be reported twice
+        // in a single batch. Count each key once per poll, as the JDK's KQueueSelectorImpl does.
+        pollCount++;
         synchronized (regLock) {
             for (int i = 0; i < nready; ++i) {
                 int fd = io.getFD(eventbuf, i);
@@ -193,15 +196,14 @@ class KQSelector extends java.nio.channels.spi.AbstractSelector {
                         if (filt == EVFILT_WRITE) {
                             ops |= iops & (SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE);
                         }
-                        // EVFILT_READ and EVFILT_WRITE are separate kevents, so one key can
-                        // be reported twice in a single batch: accumulate, do not overwrite.
-                        if (updated.add(k)) {
-                            k.readyOps(selected.contains(k) ? k.readyOps() | ops : ops);
-                            ++updatedKeyCount;
-                        } else {
-                            k.readyOps(k.readyOps() | ops);
-                        }
+                        // a key already selected, by an earlier select or the other filter's
+                        // kevent in this batch, accumulates its ready ops instead of overwriting them
+                        k.readyOps(selected.contains(k) ? k.readyOps() | ops : ops);
                         selected.add(k);
+                        if (k.lastPolled != pollCount) {
+                            k.lastPolled = pollCount;
+                            ++updatedKeyCount;
+                        }
                     }
 
                 } else if (fd == pipefd[0]) {
