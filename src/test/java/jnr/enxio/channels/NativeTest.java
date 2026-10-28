@@ -13,6 +13,7 @@ import jnr.ffi.annotations.Out;
 
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
+import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
@@ -84,5 +85,26 @@ public class NativeTest {
                 .load(Platform.getNativePlatform().getStandardCLibraryName());
 
         int socketpair(int domain, int type, int protocol, @Out int[] fds);
+    }
+
+    @Test
+    public void pollSelectorReportsDeviceReady() throws Exception {
+        // Skip on non-unix
+        if (!Platform.getNativePlatform().isUnix()) return;
+
+        try (RandomAccessFile file = new RandomAccessFile("/dev/null", "rw")) {
+            FileDescriptor descriptor = file.getFD();
+            Field fdField = descriptor.getClass().getDeclaredField("fd");
+            fdField.setAccessible(true);
+            int fd = (int)(Integer)fdField.get(descriptor);
+
+            NativeDeviceChannel channel = new NativeDeviceChannel(fd, true);
+            channel.configureBlocking(false);
+            try (Selector selector = channel.provider().openSelector()) {
+                SelectionKey key = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                Assert.assertEquals(1, selector.selectNow());
+                Assert.assertEquals(SelectionKey.OP_READ | SelectionKey.OP_WRITE, key.readyOps());
+            }
+        }
     }
 }

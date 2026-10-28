@@ -42,6 +42,7 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
     static final int POLLOUT = 0x4;
     static final int POLLERR = 0x8;
     static final int POLLHUP = 0x10;
+    static final int POLLNVAL = 0x20;
 
     
     private PollSelectionKey[] keyArray = new PollSelectionKey[0];
@@ -256,8 +257,9 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
                 }
 
                 // If an error occurred, enable all interested ops and let the
-                // event handling code deal with it
-                if ((revents & (POLLHUP | POLLERR)) != 0) {
+                // event handling code deal with it. macOS poll(2) answers
+                // POLLNVAL for devices, which it does not support.
+                if ((revents & (POLLHUP | POLLERR | POLLNVAL)) != 0) {
                     ops = iops;
                 }
 
