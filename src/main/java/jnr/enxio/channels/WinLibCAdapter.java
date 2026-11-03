@@ -44,7 +44,7 @@ public final class WinLibCAdapter implements LibC, LoadedLibrary {
         public @ssize_t int _write(int fd, @In byte[] data, @size_t long size);
         public int _pipe(@Out int[] fds);
 
-        @IgnoreError String _strerror(int error);
+        @IgnoreError String strerror(int error);
 
         // These functions don't exist:
 
@@ -71,7 +71,7 @@ public final class WinLibCAdapter implements LibC, LoadedLibrary {
     @Override public int write(int fd, ByteBuffer data, long size) { return win._write(fd, data, size); }
     @Override public int write(int fd, byte[] data, long size) { return win._write(fd, data, size); }
     @Override public int pipe(int[] fds) { return win._pipe(fds); }
-    @Override public String strerror(int error) { return win._strerror(error); }
+    @Override public String strerror(int error) { return win.strerror(error); }
 
     @Override
     public Runtime getRuntime() {
