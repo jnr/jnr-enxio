@@ -28,22 +28,21 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static jnr.enxio.channels.Native.EVENTS_OFFSET;
+import static jnr.enxio.channels.Native.FD_OFFSET;
+import static jnr.enxio.channels.Native.POLLERR;
+import static jnr.enxio.channels.Native.POLLFD_SIZE;
+import static jnr.enxio.channels.Native.POLLHUP;
+import static jnr.enxio.channels.Native.POLLIN;
+import static jnr.enxio.channels.Native.POLLNVAL;
+import static jnr.enxio.channels.Native.POLLOUT;
+import static jnr.enxio.channels.Native.REVENTS_OFFSET;
+
 /**
  * An implementation of a {@link java.nio.channels.Selector} that uses good old
  * poll(2)
  */
 class PollSelector extends java.nio.channels.spi.AbstractSelector {
-    private static final int POLLFD_SIZE = 8;
-    private static final int FD_OFFSET = 0;
-    private static final int EVENTS_OFFSET = 4;
-    private static final int REVENTS_OFFSET = 6;
-
-    static final int POLLIN = 0x1;
-    static final int POLLOUT = 0x4;
-    static final int POLLERR = 0x8;
-    static final int POLLHUP = 0x10;
-
-    
     private PollSelectionKey[] keyArray = new PollSelectionKey[0];
     private ByteBuffer pollData = null;
     private int nfds;
@@ -256,8 +255,9 @@ class PollSelector extends java.nio.channels.spi.AbstractSelector {
                 }
 
                 // If an error occurred, enable all interested ops and let the
-                // event handling code deal with it
-                if ((revents & (POLLHUP | POLLERR)) != 0) {
+                // event handling code deal with it. macOS poll(2) answers
+                // POLLNVAL for devices, which it does not support.
+                if ((revents & (POLLHUP | POLLERR | POLLNVAL)) != 0) {
                     ops = iops;
                 }
 

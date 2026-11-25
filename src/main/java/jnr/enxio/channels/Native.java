@@ -35,6 +35,8 @@ import jnr.ffi.types.u_int64_t;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 public final class Native {
 
@@ -167,6 +169,84 @@ public final class Native {
     
     public static int shutdown(int fd, int how) {
         return libc().shutdown(fd, how);
+    }
+
+    // <poll.h> values shared by Linux, macOS, the BSDs and Solaris, the platforms isPollSupported accepts
+    public static final short POLLIN = 0x1;
+    public static final short POLLOUT = 0x4;
+    public static final short POLLERR = 0x8;
+    public static final short POLLHUP = 0x10;
+    public static final short POLLNVAL = 0x20;
+
+    // struct pollfd { int fd; short events; short revents; }
+    static final int POLLFD_SIZE = 8;
+    static final int FD_OFFSET = 0;
+    static final int EVENTS_OFFSET = 4;
+    static final int REVENTS_OFFSET = 6;
+
+    // Reused, since a fresh buffer per call makes poll two to three times slower. A caller owns the buffer it takes
+    // out of the slot for its thread id until it puts it back, so threads, virtual threads and fibers never share one.
+    // The slot count is the next power of two at or above twice the CPUs, so a thread id can be masked to a slot.
+    static final int POLLFDS_SLOTS = Integer.highestOneBit(java.lang.Runtime.getRuntime().availableProcessors() * 2 - 1) << 1;
+    private static final int POLLFDS_SPACING = 32; // at least a 128-byte cache line of references
+    private static final AtomicReferenceArray<Pointer> POLLFDS =
+            new AtomicReferenceArray<Pointer>((POLLFDS_SLOTS + 1) * POLLFDS_SPACING);
+
+    private static final boolean POLL_SUPPORTED = pollSupported();
+
+    // AIX, for one, has other values, and Windows has no poll(2)
+    private static boolean pollSupported() {
+        Platform platform = Platform.getNativePlatform();
+        OS os = platform.getOS();
+        return platform.isBSD() || os == OS.LINUX || os == OS.ZLINUX || os == OS.SOLARIS;
+    }
+
+    /** Whether {@link #poll} and the POLL* constants can be used on this platform. */
+    public static boolean isPollSupported() {
+        return POLL_SUPPORTED;
+    }
+
+    /**
+     * poll(2) over plain descriptors, only where {@link #isPollSupported()} is true. Fills {@code revents} unless it
+     * returns -1, when the error is in {@link #getLastError()}; EINTR isn't retried. The timeout is in milliseconds,
+     * and a negative one waits forever. A negative descriptor is skipped and gets 0. List each descriptor once, as
+     * macOS reports a duplicate in only one entry, and prefer a zero timeout: any other can block in native code, out
+     * of reach of interrupts and pinning a virtual thread's carrier.
+     */
+    public static int poll(int[] fds, short[] events, short[] revents, int timeout) {
+        if (!POLL_SUPPORTED) {
+            throw new UnsupportedOperationException("poll isn't supported on " + Platform.getNativePlatform().getOS());
+        }
+
+        int nfds = fds.length;
+        if (events.length < nfds || revents.length < nfds) {
+            throw new IllegalArgumentException("events and revents need an entry for every descriptor");
+        }
+
+        // + 1 keeps slots off the array header's cache line
+        int slot = (((int) Thread.currentThread().getId() & (POLLFDS_SLOTS - 1)) + 1) * POLLFDS_SPACING;
+        Pointer pollfds = POLLFDS.getAndSet(slot, null);
+        if (pollfds == null || pollfds.size() < (long) nfds * POLLFD_SIZE) {
+            ByteBuffer buffer = ByteBuffer.allocateDirect(Math.max(nfds, 8) * POLLFD_SIZE).order(ByteOrder.nativeOrder());
+            pollfds = Pointer.wrap(getRuntime(), buffer);
+        }
+
+        for (int i = 0; i < nfds; i++) {
+            long pollfd = (long) i * POLLFD_SIZE;
+            pollfds.putInt(pollfd + FD_OFFSET, fds[i]);
+            pollfds.putShort(pollfd + EVENTS_OFFSET, events[i]);
+            pollfds.putShort(pollfd + REVENTS_OFFSET, (short) 0);
+        }
+
+        int n = libc().poll(pollfds, nfds, timeout);
+        if (n >= 0) {
+            for (int i = 0; i < nfds; i++) {
+                revents[i] = pollfds.getShort((long) i * POLLFD_SIZE + REVENTS_OFFSET);
+            }
+        }
+
+        POLLFDS.lazySet(slot, pollfds);
+        return n;
     }
 
     public static String getLastErrorString() {
